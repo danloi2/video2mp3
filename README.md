@@ -70,6 +70,7 @@ The project is built on the pillars of **native performance**, **user-centric de
 - **Windows**: `winget install ffmpeg`
 - **macOS**: `brew install ffmpeg`
 - **Linux (Ubuntu/Debian)**: `sudo apt install ffmpeg`
+- **Linux (Fedora)**: `sudo dnf install ffmpeg`
 
 ### Installation & Build
 

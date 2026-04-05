@@ -1,0 +1,269 @@
+use std::sync::atomic::Ordering;
+use std::time::Duration;
+use eframe::egui::{self, Color32, Margin, RichText, ScrollArea, Stroke};
+
+use super::ConvApp;
+use super::state::Estado;
+use super::helpers::{cr, etiqueta_pista};
+
+pub(crate) fn render_ui(app: &mut ConvApp, ui: &mut egui::Ui) {
+    app.procesar_mensajes();
+    
+    let ctx = ui.ctx().clone();
+    app.manejar_drop(&ctx);
+
+    if app.convirtiendo {
+        ctx.request_repaint_after(Duration::from_millis(100));
+    }
+
+    render_top_panel(app, ui, &ctx);
+    render_bottom_panel(app, ui);
+    render_central_panel(app, ui, &ctx);
+}
+
+fn render_top_panel(app: &mut ConvApp, ui: &mut egui::Ui, _ctx: &egui::Context) {
+    egui::Panel::top("cabecera")
+        .exact_size(48.0)
+        .show_inside(ui, |ui| {
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                ui.add_space(6.0);
+                
+                if let Some(tex) = &app.logo_texture {
+                    ui.add(egui::Image::new(tex).fit_to_exact_size(egui::vec2(28.0, 28.0)));
+                    ui.add_space(4.0);
+                } else {
+                    ui.label(
+                        RichText::new("🎵")
+                            .size(21.0)
+                            .color(Color32::from_rgb(105, 75, 215))
+                    );
+                }
+                
+                ui.label(
+                    RichText::new("video2mp3")
+                        .size(21.0)
+                        .color(Color32::from_rgb(105, 75, 215))
+                        .strong(),
+                );
+                ui.label(
+                    RichText::new("— Conversor de vídeo a MP3")
+                        .size(13.0)
+                        .color(Color32::from_rgb(100, 105, 120)),
+                );
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.add_space(12.0);
+                    let (punto, txt, col) = if app.ffmpeg_ok {
+                        ("●", " FFmpeg activo", Color32::from_rgb(45, 175, 80))
+                    } else {
+                        ("●", " FFmpeg no encontrado", Color32::from_rgb(220, 50, 50))
+                    };
+                    ui.label(RichText::new(format!("{}{}", punto, txt)).color(col).size(12.0));
+                });
+            });
+        });
+}
+
+fn render_bottom_panel(app: &mut ConvApp, ui: &mut egui::Ui) {
+    egui::Panel::bottom("panel_log")
+        .min_size(160.0)
+        .max_size(280.0)
+        .resizable(true)
+        .show_inside(ui, |ui| {
+            ui.add_space(4.0);
+
+            if app.progreso.1 > 0 {
+                let ratio = (app.progreso.0 as f32 + app.progreso_actual) / app.progreso.1 as f32;
+                let texto = format!(
+                    "{} de {} archivo(s)  —  {:.0}%",
+                    app.progreso.0, app.progreso.1, ratio * 100.0
+                );
+
+                let bar_h = 22.0;
+                let (rect, _) = ui.allocate_exact_size(
+                    egui::vec2(ui.available_width(), bar_h),
+                    egui::Sense::hover(),
+                );
+                if ui.is_rect_visible(rect) {
+                    let paint = ui.painter();
+                    let cr5 = cr(5);
+                    paint.rect_filled(rect, cr5, Color32::from_rgb(215, 220, 230));
+                    if ratio > 0.0 {
+                        let fill_w = (rect.width() * ratio).clamp(0.0, rect.width());
+                        let fill_rect = egui::Rect::from_min_size(rect.min, egui::vec2(fill_w, bar_h));
+                        paint.rect_filled(fill_rect, cr5, Color32::from_rgb(115, 85, 225));
+                    }
+                    
+                    let text_color = Color32::from_rgb(255, 255, 255);
+                    paint.text(
+                        rect.center(),
+                        egui::Align2::CENTER_CENTER,
+                        &texto,
+                        egui::FontId::proportional(13.0),
+                        if ratio > 0.45 { text_color } else { Color32::from_rgb(90, 95, 110) },
+                    );
+                }
+                ui.add_space(4.0);
+            }
+
+            ui.label(
+                RichText::new("📋  Registro")
+                    .size(11.0)
+                    .color(Color32::from_rgb(120, 125, 140)),
+            );
+            ui.separator();
+
+            ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .stick_to_bottom(true)
+                .show(ui, |ui| {
+                    for (ok, linea) in &app.log {
+                        let col = if *ok {
+                            Color32::from_rgb(60, 65, 80)
+                        } else {
+                            Color32::from_rgb(210, 50, 50)
+                        };
+                        ui.label(RichText::new(linea).monospace().size(12.0).color(col));
+                    }
+                });
+        });
+}
+
+fn render_central_panel(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Context) {
+    egui::CentralPanel::default().show_inside(ui, |ui| {
+        ui.add_space(4.0);
+
+        let convirtiendo = app.convirtiendo;
+
+        ui.horizontal(|ui| {
+            if ui.add_enabled(!convirtiendo, egui::Button::new("📂  Añadir archivos").fill(Color32::from_rgb(225, 230, 240)))
+                .on_hover_text("Seleccionar archivos MKV, MP4 o AVI")
+                .clicked()
+            {
+                app.anadir_archivos();
+            }
+
+            if convirtiendo {
+                if ui.add(egui::Button::new(RichText::new("⏹  Detener").color(Color32::from_rgb(255, 255, 255))).fill(Color32::from_rgb(220, 60, 60)))
+                    .on_hover_text("Cancelar la conversión actual")
+                    .clicked()
+                {
+                    app.cancelar.store(true, Ordering::Relaxed);
+                }
+            } else {
+                let hay_pendientes = app.archivos.iter().any(|a| a.seleccionado && a.estado == Estado::Pendiente);
+                if ui.add_enabled(
+                        app.ffmpeg_ok && hay_pendientes,
+                        egui::Button::new(RichText::new("▶  Convertir").color(Color32::from_rgb(255, 255, 255))).fill(Color32::from_rgb(115, 85, 225)),
+                    )
+                    .on_hover_text("Convertir los archivos seleccionados a MP3")
+                    .clicked()
+                {
+                    app.iniciar_conversion(ctx);
+                }
+            }
+
+            if ui.add_enabled(!convirtiendo, egui::Button::new("🗑  Limpiar").fill(Color32::from_rgb(240, 210, 210)))
+                .on_hover_text("Vaciar lista y registro")
+                .clicked()
+            {
+                app.archivos.clear();
+                app.log.clear();
+                app.progreso = (0, 0);
+            }
+
+            ui.separator();
+
+            if ui.add_enabled(!convirtiendo, egui::Button::new("✔ Todos")).clicked() {
+                for a in &mut app.archivos { a.seleccionado = true; }
+            }
+            if ui.add_enabled(!convirtiendo, egui::Button::new("✗ Ninguno")).clicked() {
+                for a in &mut app.archivos { a.seleccionado = false; }
+            }
+
+            let total = app.archivos.len();
+            let sel   = app.archivos.iter().filter(|a| a.seleccionado).count();
+            if total > 0 {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(RichText::new(format!("{} / {} seleccionados", sel, total)).size(12.0).color(Color32::from_rgb(110, 115, 130)));
+                });
+            }
+        });
+
+        ui.add_space(6.0);
+
+        if app.archivos.is_empty() {
+            ui.centered_and_justified(|ui| {
+                ui.label(RichText::new("Arrastra archivos aquí\no usa «Añadir archivos»").size(17.0).color(Color32::from_rgb(140, 145, 165)));
+            });
+        } else {
+            ScrollArea::vertical().show(ui, |ui| {
+                let mut eliminar: Option<usize> = None;
+
+                for (i, archivo) in app.archivos.iter_mut().enumerate() {
+                    egui::Frame::new()
+                        .fill(Color32::from_rgb(255, 255, 255))
+                        .corner_radius(cr(6))
+                        .stroke(Stroke::new(1.0, Color32::from_rgb(225, 230, 235)))
+                        .inner_margin(Margin::symmetric(10_i8, 7_i8))
+                        .show(ui, |ui| {
+
+                            ui.horizontal(|ui| {
+                                ui.add_enabled(!convirtiendo, egui::Checkbox::new(&mut archivo.seleccionado, ""));
+                                ui.label(RichText::new(archivo.estado.icono()).size(16.0).color(archivo.estado.color()));
+                                let nombre = archivo.ruta.file_name().unwrap_or_default().to_string_lossy();
+                                ui.label(RichText::new(nombre.as_ref()).size(14.0).color(Color32::from_rgb(45, 50, 65)));
+
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if !convirtiendo && ui.small_button(RichText::new("✕").color(Color32::from_rgb(200, 80, 80))).on_hover_text("Quitar de la lista").clicked() {
+                                        eliminar = Some(i);
+                                    }
+                                    let dir = archivo.ruta.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
+                                    ui.label(RichText::new(dir).size(10.0).color(Color32::from_rgb(140, 145, 160)));
+                                });
+                            });
+
+                            if !archivo.pistas.is_empty() {
+                                ui.horizontal(|ui| {
+                                    ui.add_space(30.0);
+                                    ui.label(RichText::new("🎵").size(12.0).color(Color32::from_rgb(130, 100, 255)));
+
+                                    if archivo.pistas.len() == 1 {
+                                        let p = &archivo.pistas[0];
+                                        ui.label(RichText::new(etiqueta_pista(p, 0)).size(11.0).color(Color32::from_rgb(110, 115, 130)));
+                                    } else {
+                                        ui.label(RichText::new(format!("{} pistas — audio:", archivo.pistas.len())).size(11.0).color(Color32::from_rgb(110, 115, 130)));
+                                        let sel_label = etiqueta_pista(&archivo.pistas[archivo.pista_sel], archivo.pista_sel);
+                                        
+                                        egui::ComboBox::from_id_salt(egui::Id::new(("pista", i)))
+                                            .selected_text(RichText::new(sel_label).size(11.0).color(Color32::from_rgb(60, 65, 80)))
+                                            .width(280.0)
+                                            .show_ui(ui, |ui| {
+                                                for (j, pista) in archivo.pistas.iter().enumerate() {
+                                                    let etiq = etiqueta_pista(pista, j);
+                                                    ui.selectable_value(&mut archivo.pista_sel, j, RichText::new(etiq).size(12.0).color(Color32::from_rgb(40, 45, 60)));
+                                                }
+                                            });
+                                    }
+                                });
+                            }
+
+                            if let Estado::Error(ref msg) = archivo.estado {
+                                ui.label(RichText::new(msg).size(11.0).color(Color32::from_rgb(210, 60, 60)));
+                            }
+                        });
+                    ui.add_space(3.0);
+                }
+
+                if let Some(i) = eliminar {
+                    app.archivos.remove(i);
+                }
+            });
+        }
+
+        if !app.ffmpeg_ok {
+            ui.separator();
+            ui.label(RichText::new("❌ FFmpeg no encontrado. Instálalo con: sudo apt install ffmpeg").color(Color32::from_rgb(220, 80, 80)).size(13.0));
+        }
+    });
+}
