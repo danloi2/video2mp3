@@ -7,6 +7,8 @@
 ![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
 ![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)
 ![egui](https://img.shields.io/badge/egui-FF5722?style=for-the-badge&logo=rust&logoColor=white)
+![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
+![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 
 ---
@@ -57,24 +59,30 @@ The project is built on the pillars of **native performance**, **user-centric de
 
 - Rust (v1.80+)
 - Cargo package manager
-- FFmpeg (v4.0+) available in your system's `$PATH`
+- FFmpeg (v4.0+) available in your system's `$PATH`.
 
-```bash
-# Ubuntu / Debian
-sudo apt install ffmpeg
-```
+**Installing FFmpeg:**
+
+- **Windows**: `winget install ffmpeg`
+- **macOS**: `brew install ffmpeg`
+- **Linux (Ubuntu/Debian)**: `sudo apt install ffmpeg`
 
 ### Installation & Build
 
 1. **Clone the repository** (if applicable) and navigate to the root directory:
+
    ```bash
    cd video2mp3
    ```
+
 2. **Build the application**:
+
    ```bash
    cargo build --release
    ```
+
 3. **Run the executable**:
+
    ```bash
    cargo run --release
    ```

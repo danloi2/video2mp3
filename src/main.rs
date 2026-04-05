@@ -11,17 +11,36 @@ fn main() {
 
     // Sin argumentos → interfaz gráfica
     if args.len() < 2 {
+        let icon_data = match image::load_from_memory(include_bytes!("../assets/icon.png")) {
+            Ok(img) => {
+                let img = img.to_rgba8();
+                let (width, height) = img.dimensions();
+                Some(std::sync::Arc::new(eframe::egui::IconData {
+                    rgba: img.into_raw(),
+                    width,
+                    height,
+                }))
+            }
+            Err(_) => None,
+        };
+
+        let mut viewport = eframe::egui::ViewportBuilder::default()
+            .with_title("video2mp3 — Conversor de vídeo a MP3")
+            .with_inner_size([860.0, 620.0])
+            .with_min_inner_size([640.0, 480.0])
+            .with_drag_and_drop(true);
+
+        if let Some(icon) = icon_data {
+            viewport = viewport.with_icon(icon);
+        }
+
         let options = eframe::NativeOptions {
-            viewport: eframe::egui::ViewportBuilder::default()
-                .with_title("convmp3 — Conversor de vídeo a MP3")
-                .with_inner_size([860.0, 620.0])
-                .with_min_inner_size([640.0, 480.0])
-                .with_drag_and_drop(true),
+            viewport,
             ..Default::default()
         };
 
         eframe::run_native(
-            "convmp3",
+            "video2mp3",
             options,
             Box::new(|cc| Ok(Box::new(gui::ConvApp::new(cc)))),
         )
