@@ -97,10 +97,10 @@ The project is built on the pillars of **native performance**, **user-centric de
 
 ### ⚠️ License
 
-This project is intended for daily utility and is provided "as is". Depending on FFmpeg linking, make sure to comply with FFmpeg's distribution guidelines.
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for more information.
 
-- **Source Code**: Open-source and free to adapt.
-- **Dependencies**: Relies on system-installed FFmpeg binaries (not bundled).
+- **Source Code**: Open-source, free to use, modify, and distribute.
+- **Dependencies**: Relies on system-installed FFmpeg binaries (not bundled), which may have their own licensing guidelines (e.g., GPL/LGPL).
 
 ---
 
