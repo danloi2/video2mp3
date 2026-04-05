@@ -1,5 +1,9 @@
 # video2mp3 🎵
 
+<p align="center">
+  <img src="assets/icon.png" width="180" alt="video2mp3 Logo">
+</p>
+
 > **A blazingly fast, native video-to-audio converter.**
 
 **video2mp3** is a modern, high-performance desktop application designed to effortlessly extract MP3 audio from your video files. It combines the raw processing power of FFmpeg with a premium graphical interface, providing all the essential tools for both single-file and batch conversions.
