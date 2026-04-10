@@ -36,4 +36,13 @@ pub fn aplicar_tema(ctx: &egui::Context) {
     visuals.selection.stroke = Stroke::new(1.0, accent_primary);
 
     ctx.set_visuals(visuals);
+
+    let mut style = (*ctx.global_style()).clone();
+    
+    // Aumentar tamaños de fuente por defecto
+    for font_id in style.text_styles.values_mut() {
+        font_id.size += 4.0; // Incremento total de +4 desde el original
+    }
+    
+    ctx.set_global_style(style);
 }

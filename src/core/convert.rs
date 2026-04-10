@@ -3,12 +3,15 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 use super::probe::obtener_duracion_s;
+use super::types::{OpcionesVideo, TipoConversion};
 
 pub fn convertir_archivo<F>(
     origen: &Path,
     destino: Option<&Path>,
     audio_stream: u64,
     sobreescribir: bool,
+    tipo: TipoConversion,
+    opciones: OpcionesVideo,
     cancelar: Arc<AtomicBool>,
     on_progress: F,
 ) -> Result<String, String>
@@ -20,12 +23,17 @@ where
         .ok_or_else(|| "Nombre de archivo inválido".to_string())?
         .to_string_lossy();
 
+    let ext = match tipo {
+        TipoConversion::AudioMP3 => "mp3",
+        _ => "mkv",
+    };
+
     let destino_path: PathBuf = match destino {
         Some(d) => d.to_path_buf(),
         None => origen
             .parent()
             .unwrap_or(Path::new("."))
-            .join(format!("{}.mp3", stem)),
+            .join(format!("{}.{}", stem, ext)),
     };
 
     if destino_path.exists() && !sobreescribir {
@@ -37,22 +45,148 @@ where
 
     let duracion_s = obtener_duracion_s(&origen.to_string_lossy()).unwrap_or(0.0);
 
+    let mut args = vec!["-y".to_string()];
+
+    use crate::core::types::AceleracionHW;
+    if opciones.aceleracion != AceleracionHW::Ninguna {
+        args.extend(["-hwaccel".to_string(), "auto".to_string()]);
+    }
+
+    args.extend([
+        "-i".to_string(),
+        origen.to_string_lossy().to_string(),
+    ]);
+
+    match tipo {
+        TipoConversion::AudioMP3 => {
+            args.extend([
+                "-map".to_string(),
+                format!("0:{}", audio_stream),
+                "-c:a".to_string(),
+                "libmp3lame".to_string(),
+                "-q:a".to_string(),
+                "2".to_string(),
+            ]);
+        }
+        TipoConversion::VideoH264 => {
+            let codec = match opciones.aceleracion {
+                AceleracionHW::NVENC => "h264_nvenc",
+                AceleracionHW::QSV   => "h264_qsv",
+                AceleracionHW::AMF   => "h264_amf",
+                AceleracionHW::VAAPI => "h264_vaapi",
+                AceleracionHW::VideoToolbox => "h264_videotoolbox",
+                AceleracionHW::Ninguna => "libx264",
+            };
+            
+            args.extend([
+                "-map".to_string(), "0:v:0".to_string(),
+                "-map".to_string(), format!("0:{}", audio_stream),
+                "-c:v".to_string(), codec.to_string(),
+            ]);
+
+            match opciones.aceleracion {
+                AceleracionHW::Ninguna => {
+                    args.extend(["-crf".to_string(), "18".to_string()]);
+                    if opciones.preservar_grano {
+                        args.extend(["-tune".to_string(), "grain".to_string()]);
+                    } else {
+                        args.extend(["-tune".to_string(), "film".to_string()]);
+                    }
+                    args.extend([
+                        "-preset".to_string(), "slow".to_string(),
+                        "-profile:v".to_string(), "high".to_string(),
+                        "-level".to_string(), "4.1".to_string(),
+                        "-x264-params".to_string(), "ref=4:bframes=3:aq-mode=2".to_string(),
+                    ]);
+                }
+                AceleracionHW::NVENC => {
+                    args.extend([
+                        "-preset".to_string(), "slow".to_string(),
+                        "-rc".to_string(), "vbr".to_string(),
+                        "-cq".to_string(), "19".to_string(),
+                        "-profile:v".to_string(), "high".to_string(),
+                    ]);
+                }
+                AceleracionHW::VideoToolbox => {
+                    args.extend(["-q:v".to_string(), "60".to_string()]); // Calidad 0-100 en VTB
+                }
+                _ => {
+                    // Genérico para QSV/AMF/VAAPI por ahora
+                    args.extend(["-q:v".to_string(), "19".to_string()]);
+                }
+            }
+
+            args.extend([
+                "-c:a".to_string(), "ac3".to_string(),
+                "-b:a".to_string(), "448k".to_string(),
+            ]);
+        }
+        TipoConversion::VideoH265 => {
+            let codec = match opciones.aceleracion {
+                AceleracionHW::NVENC => "hevc_nvenc",
+                AceleracionHW::QSV   => "hevc_qsv",
+                AceleracionHW::AMF   => "hevc_amf",
+                AceleracionHW::VAAPI => "hevc_vaapi",
+                AceleracionHW::VideoToolbox => "hevc_videotoolbox",
+                AceleracionHW::Ninguna => "libx265",
+            };
+
+            args.extend([
+                "-map".to_string(), "0:v:0".to_string(),
+                "-map".to_string(), format!("0:{}", audio_stream),
+                "-c:v".to_string(), codec.to_string(),
+            ]);
+
+            match opciones.aceleracion {
+                AceleracionHW::Ninguna => {
+                    args.extend(["-crf".to_string(), "20".to_string()]);
+                    if opciones.preservar_grano {
+                        args.extend(["-tune".to_string(), "grain".to_string()]);
+                    }
+                    args.extend([
+                        "-preset".to_string(), "slow".to_string(),
+                        "-x265-params".to_string(), "aq-mode=3:aq-strength=1.0:deblock=-1,-1".to_string(),
+                    ]);
+                }
+                AceleracionHW::NVENC => {
+                    args.extend([
+                        "-preset".to_string(), "slow".to_string(),
+                        "-rc".to_string(), "vbr".to_string(),
+                        "-cq".to_string(), "21".to_string(),
+                    ]);
+                }
+                AceleracionHW::VideoToolbox => {
+                    args.extend(["-q:v".to_string(), "60".to_string()]);
+                }
+                _ => {
+                    args.extend(["-q:v".to_string(), "21".to_string()]);
+                }
+            }
+
+            args.extend([
+                "-c:a".to_string(), "aac".to_string(),
+                "-b:a".to_string(), "192k".to_string(),
+            ]);
+        }
+    }
+
+    if opciones.optimizar_color {
+        args.extend([
+            "-color_primaries".to_string(), "bt709".to_string(),
+            "-color_trc".to_string(), "bt709".to_string(),
+            "-colorspace".to_string(), "bt709".to_string(),
+        ]);
+    }
+
+    args.extend([
+        "-progress".to_string(),
+        "pipe:1".to_string(),
+        "-nostats".to_string(),
+        destino_path.to_string_lossy().to_string(),
+    ]);
+
     let mut child = Command::new("ffmpeg")
-        .args([
-            "-y",
-            "-i",
-            &origen.to_string_lossy(),
-            "-map",
-            &format!("0:{}", audio_stream),
-            "-c:a",
-            "libmp3lame",
-            "-q:a",
-            "2",
-            "-progress",
-            "pipe:1",
-            "-nostats",
-            &destino_path.to_string_lossy(),
-        ])
+        .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()

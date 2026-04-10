@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::{Arc, atomic::AtomicBool};
 
-use crate::core::{verificar_ffmpeg, convertir_archivo, elegir_pista_defecto, obtener_pistas};
+use crate::core::{verificar_ffmpeg, convertir_archivo, elegir_pista_defecto, obtener_pistas, TipoConversion, OpcionesVideo, AceleracionHW};
 
 pub fn run_cli_mode(args: Vec<String>) {
     if !verificar_ffmpeg() {
@@ -58,6 +58,8 @@ pub fn run_cli_mode(args: Vec<String>) {
                 None,
                 stream,
                 false, // CLI por defecto no sobreescribe
+                TipoConversion::AudioMP3,
+                OpcionesVideo { preservar_grano: false, optimizar_color: false, aceleracion: AceleracionHW::Ninguna },
                 cancel_clone,
                 |_ratio| {}, 
             ) {
@@ -125,6 +127,8 @@ pub fn run_cli_mode(args: Vec<String>) {
         Some(&destino_path),
         stream,
         false, 
+        TipoConversion::AudioMP3,
+        OpcionesVideo { preservar_grano: false, optimizar_color: false, aceleracion: AceleracionHW::Ninguna },
         cancelar,
         |_ratio| {}, 
     ) {

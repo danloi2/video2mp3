@@ -9,8 +9,8 @@ fn main() {
     if args.len() < 2 {
         let mut viewport = eframe::egui::ViewportBuilder::default()
             .with_title("video2mp3 — Conversor de vídeo a MP3")
-            .with_inner_size([860.0, 620.0])
-            .with_min_inner_size([640.0, 480.0])
+            .with_inner_size([1100.0, 800.0])
+            .with_min_inner_size([1100.0, 800.0])
             .with_drag_and_drop(true);
 
         if let Ok(img) = image::load_from_memory(include_bytes!("../assets/icon.png")) {
@@ -26,6 +26,7 @@ fn main() {
 
         let options = eframe::NativeOptions {
             viewport,
+            persist_window: false,
             ..Default::default()
         };
 

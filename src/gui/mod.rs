@@ -8,11 +8,13 @@ use std::sync::{Arc, atomic::AtomicBool};
 use std::sync::mpsc::Receiver;
 use eframe::egui;
 
-use crate::core::verificar_ffmpeg;
+use crate::core::{verificar_ffmpeg, TipoConversion, OpcionesVideo, obtener_version_ffmpeg, CapacidadesHardware, detectar_capacidades_hardware, AceleracionHW};
 use state::{Archivo, Msg};
 
 pub struct ConvApp {
     pub(crate) ffmpeg_ok:       bool,
+    pub(crate) ffmpeg_version:  String,
+    pub(crate) capacidades:     CapacidadesHardware,
     pub(crate) archivos:        Vec<Archivo>,
     pub(crate) log:             Vec<(bool, String)>,
     pub(crate) convirtiendo:    bool,
@@ -21,6 +23,10 @@ pub struct ConvApp {
     pub(crate) cancelar:        Arc<AtomicBool>,
     pub(crate) rx:              Option<Receiver<Msg>>,
     pub(crate) logo_texture:    Option<egui::TextureHandle>,
+    // Nuevas opciones
+    pub(crate) tipo_conversion: TipoConversion,
+    pub(crate) opciones_video:  OpcionesVideo,
+    pub(crate) primera_vez:     bool,
 }
 
 impl ConvApp {
@@ -40,6 +46,8 @@ impl ConvApp {
 
         Self {
             ffmpeg_ok:       verificar_ffmpeg(),
+            ffmpeg_version:  obtener_version_ffmpeg(),
+            capacidades:     detectar_capacidades_hardware(),
             archivos:        vec![],
             log:             vec![],
             convirtiendo:    false,
@@ -48,12 +56,19 @@ impl ConvApp {
             cancelar:        Arc::new(AtomicBool::new(false)),
             rx:              None,
             logo_texture,
+            tipo_conversion: TipoConversion::AudioMP3,
+            opciones_video:  OpcionesVideo { preservar_grano: false, optimizar_color: true, aceleracion: AceleracionHW::Ninguna },
+            primera_vez:     true,
         }
     }
 }
 
 impl eframe::App for ConvApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        if self.primera_vez {
+            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Maximized(true));
+            self.primera_vez = false;
+        }
         layout::render_ui(self, ui);
     }
 }

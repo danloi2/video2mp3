@@ -30,37 +30,64 @@ fn render_top_panel(app: &mut ConvApp, ui: &mut egui::Ui, _ctx: &egui::Context) 
                 ui.add_space(6.0);
                 
                 if let Some(tex) = &app.logo_texture {
-                    ui.add(egui::Image::new(tex).fit_to_exact_size(egui::vec2(28.0, 28.0)));
+                    ui.add(egui::Image::new(tex).fit_to_exact_size(egui::vec2(32.0, 32.0)));
                     ui.add_space(4.0);
                 } else {
                     ui.label(
                         RichText::new("🎵")
-                            .size(21.0)
+                            .size(26.0)
                             .color(Color32::from_rgb(105, 75, 215))
                     );
                 }
                 
                 ui.label(
                     RichText::new("video2mp3")
-                        .size(21.0)
+                        .size(26.0)
                         .color(Color32::from_rgb(105, 75, 215))
                         .strong(),
                 );
                 ui.label(
                     RichText::new("— Conversor de vídeo a MP3")
-                        .size(13.0)
+                        .size(18.0)
                         .color(Color32::from_rgb(100, 105, 120)),
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.add_space(12.0);
                     let (punto, txt, col) = if app.ffmpeg_ok {
-                        ("●", " FFmpeg activo", Color32::from_rgb(45, 175, 80))
+                        ("●", format!(" FFmpeg {}", app.ffmpeg_version), Color32::from_rgb(45, 175, 80))
                     } else {
-                        ("●", " FFmpeg no encontrado", Color32::from_rgb(220, 50, 50))
+                        ("●", " FFmpeg no encontrado".to_string(), Color32::from_rgb(220, 50, 50))
                     };
-                    ui.label(RichText::new(format!("{}{}", punto, txt)).color(col).size(12.0));
+                    ui.label(RichText::new(format!("{}{}", punto, txt)).color(col).size(16.0));
+
+                    ui.add_space(8.0);
+                    render_hw_tags(ui, &app.capacidades);
                 });
             });
+        });
+}
+
+fn render_hw_tags(ui: &mut egui::Ui, c: &crate::core::CapacidadesHardware) {
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        
+        tag(ui, "CPU", Color32::from_rgb(140, 145, 155));
+        if c.nvenc { tag(ui, "NVENC", Color32::from_rgb(118, 185, 0)); }
+        if c.qsv   { tag(ui, "QSV",   Color32::from_rgb(0, 104, 181)); }
+        if c.amf   { tag(ui, "AMF",   Color32::from_rgb(237, 28, 36)); }
+        if c.vaapi { tag(ui, "VAAPI", Color32::from_rgb(255, 140, 0)); }
+        if c.vtb   { tag(ui, "APPLE", Color32::from_rgb(160, 160, 160)); }
+    });
+}
+
+fn tag(ui: &mut egui::Ui, text: &str, color: Color32) {
+    egui::Frame::new()
+        .fill(color.gamma_multiply(0.15))
+        .stroke(egui::Stroke::new(1.0, color.gamma_multiply(0.5)))
+        .corner_radius(cr(4))
+        .inner_margin(Margin::symmetric(6_i8, 2_i8))
+        .show(ui, |ui| {
+            ui.label(RichText::new(text).size(12.0).color(color).strong());
         });
 }
 
@@ -99,7 +126,7 @@ fn render_bottom_panel(app: &mut ConvApp, ui: &mut egui::Ui) {
                         rect.center(),
                         egui::Align2::CENTER_CENTER,
                         &texto,
-                        egui::FontId::proportional(13.0),
+                        egui::FontId::proportional(18.0),
                         if ratio > 0.45 { text_color } else { Color32::from_rgb(90, 95, 110) },
                     );
                 }
@@ -108,7 +135,7 @@ fn render_bottom_panel(app: &mut ConvApp, ui: &mut egui::Ui) {
 
             ui.label(
                 RichText::new("📋  Registro")
-                    .size(11.0)
+                    .size(15.0)
                     .color(Color32::from_rgb(120, 125, 140)),
             );
             ui.separator();
@@ -123,7 +150,7 @@ fn render_bottom_panel(app: &mut ConvApp, ui: &mut egui::Ui) {
                         } else {
                             Color32::from_rgb(210, 50, 50)
                         };
-                        ui.label(RichText::new(linea).monospace().size(12.0).color(col));
+                        ui.label(RichText::new(linea).monospace().size(16.0).color(col));
                     }
                 });
         });
@@ -143,6 +170,13 @@ fn render_central_panel(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Contex
                 app.anadir_archivos();
             }
 
+            if ui.add_enabled(!convirtiendo, egui::Button::new("📁  Añadir carpeta").fill(Color32::from_rgb(225, 230, 240)))
+                .on_hover_text("Añadir todos los vídeos de una carpeta")
+                .clicked()
+            {
+                app.anadir_carpeta();
+            }
+
             if convirtiendo {
                 if ui.add(egui::Button::new(RichText::new("⏹  Detener").color(Color32::from_rgb(255, 255, 255))).fill(Color32::from_rgb(220, 60, 60)))
                     .on_hover_text("Cancelar la conversión actual")
@@ -156,7 +190,7 @@ fn render_central_panel(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Contex
                         app.ffmpeg_ok && hay_pendientes,
                         egui::Button::new(RichText::new("▶  Convertir").color(Color32::from_rgb(255, 255, 255))).fill(Color32::from_rgb(115, 85, 225)),
                     )
-                    .on_hover_text("Convertir los archivos seleccionados a MP3")
+                    .on_hover_text("Convertir los archivos seleccionados")
                     .clicked()
                 {
                     app.iniciar_conversion(ctx);
@@ -185,16 +219,98 @@ fn render_central_panel(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Contex
             let sel   = app.archivos.iter().filter(|a| a.seleccionado).count();
             if total > 0 {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(RichText::new(format!("{} / {} seleccionados", sel, total)).size(12.0).color(Color32::from_rgb(110, 115, 130)));
+                    ui.label(RichText::new(format!("{} / {} seleccionados", sel, total)).size(16.0).color(Color32::from_rgb(110, 115, 130)));
                 });
             }
         });
 
-        ui.add_space(6.0);
+        ui.add_space(8.0);
+
+        // --- Panel de Opciones de Conversión ---
+        egui::Frame::new()
+            .fill(Color32::from_rgb(245, 247, 250))
+            .corner_radius(cr(8))
+            .inner_margin(Margin::same(10_i8))
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("Modo de conversión:").strong().size(18.0));
+                    
+                    use crate::core::TipoConversion;
+                    let tipo_text = match app.tipo_conversion {
+                        TipoConversion::AudioMP3  => "🎵 Audio (MP3)",
+                        TipoConversion::VideoH264 => "🎬 Vídeo (H.264 - Máxima compatibilidad)",
+                        TipoConversion::VideoH265 => "🎬 Vídeo (H.265 - Máxima compresión)",
+                    };
+
+                    egui::ComboBox::from_id_salt("tipo_conv")
+                        .selected_text(RichText::new(tipo_text).size(18.0).color(Color32::from_rgb(45, 50, 65)))
+                        .width(320.0)
+                        .show_ui(ui, |ui| {
+                            let mut sel_val = |ui: &mut egui::Ui, val: TipoConversion, text: &str| {
+                                let is_sel = app.tipo_conversion == val;
+                                let col = if is_sel { Color32::WHITE } else { Color32::from_rgb(45, 50, 65) };
+                                ui.selectable_value(&mut app.tipo_conversion, val, RichText::new(text).color(col));
+                            };
+
+                            sel_val(ui, TipoConversion::AudioMP3, "🎵 Audio (MP3)");
+                            sel_val(ui, TipoConversion::VideoH264, "🎬 Vídeo (H.264 - Máxima compatibilidad)");
+                            sel_val(ui, TipoConversion::VideoH265, "🎬 Vídeo (H.265 - Máxima compresión)");
+                        });
+
+                    if app.tipo_conversion != TipoConversion::AudioMP3 {
+                        ui.separator();
+                        ui.checkbox(&mut app.opciones_video.preservar_grano, "🌑 Preservar grano");
+                        ui.checkbox(&mut app.opciones_video.optimizar_color, "🎨 Optimizar color (BT.709)");
+                    }
+                    
+                    ui.separator();
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("Aceleración:").size(16.0));
+                        render_hw_tags(ui, &app.capacidades);
+                    });
+                    
+                    use crate::core::AceleracionHW;
+                    let ac_text = match app.opciones_video.aceleracion {
+                        AceleracionHW::Ninguna => "❌ Solo CPU",
+                        AceleracionHW::NVENC   => "🚀 NVIDIA (NVENC)",
+                        AceleracionHW::QSV     => "⚡ Intel (QSV)",
+                        AceleracionHW::AMF     => "🏎 AMD (AMF)",
+                        AceleracionHW::VAAPI   => "🐧 Linux (VAAPI)",
+                        AceleracionHW::VideoToolbox => "🍎 Apple (VTB)",
+                    };
+
+                    egui::ComboBox::from_id_salt("hw_accel")
+                        .selected_text(RichText::new(ac_text).size(16.0).color(Color32::from_rgb(60, 65, 80)))
+                        .width(160.0)
+                        .show_ui(ui, |ui| {
+                            let mut hw_button = |ui: &mut egui::Ui, val: AceleracionHW, label: &str, detectado: bool| {
+                                let is_sel = app.opciones_video.aceleracion == val;
+                                let col = if is_sel { Color32::WHITE } else { Color32::from_rgb(45, 50, 65) };
+                                
+                                ui.add_enabled_ui(detectado, |ui| {
+                                    let res = ui.selectable_value(&mut app.opciones_video.aceleracion, val, RichText::new(label).color(col));
+                                    if !detectado {
+                                        res.on_hover_text("Este hardware no fue detectado en el sistema.");
+                                    }
+                                });
+                            };
+
+                            hw_button(ui, AceleracionHW::Ninguna, "❌ Solo CPU", true);
+                            hw_button(ui, AceleracionHW::NVENC,   "🚀 NVIDIA (NVENC)", app.capacidades.nvenc);
+                            hw_button(ui, AceleracionHW::QSV,     "⚡ Intel (QSV)",     app.capacidades.qsv);
+                            hw_button(ui, AceleracionHW::AMF,     "🏎 AMD (AMF)",       app.capacidades.amf);
+                            hw_button(ui, AceleracionHW::VAAPI,   "🐧 Linux (VAAPI)",   app.capacidades.vaapi);
+                            hw_button(ui, AceleracionHW::VideoToolbox, "🍎 Apple (VTB)", app.capacidades.vtb);
+                        });
+                });
+            });
+
+        ui.add_space(8.0);
+
 
         if app.archivos.is_empty() {
             ui.centered_and_justified(|ui| {
-                ui.label(RichText::new("Arrastra archivos aquí\no usa «Añadir archivos»").size(17.0).color(Color32::from_rgb(140, 145, 165)));
+                ui.label(RichText::new("Arrastra archivos aquí\no usa «Añadir archivos»").size(22.0).color(Color32::from_rgb(140, 145, 165)));
             });
         } else {
             ScrollArea::vertical().show(ui, |ui| {
@@ -210,38 +326,40 @@ fn render_central_panel(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Contex
 
                             ui.horizontal(|ui| {
                                 ui.add_enabled(!convirtiendo, egui::Checkbox::new(&mut archivo.seleccionado, ""));
-                                ui.label(RichText::new(archivo.estado.icono()).size(16.0).color(archivo.estado.color()));
+                                ui.label(RichText::new(archivo.estado.icono()).size(21.0).color(archivo.estado.color()));
                                 let nombre = archivo.ruta.file_name().unwrap_or_default().to_string_lossy();
-                                ui.label(RichText::new(nombre.as_ref()).size(14.0).color(Color32::from_rgb(45, 50, 65)));
+                                ui.label(RichText::new(nombre.as_ref()).size(19.0).color(Color32::from_rgb(45, 50, 65)));
 
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                     if !convirtiendo && ui.small_button(RichText::new("✕").color(Color32::from_rgb(200, 80, 80))).on_hover_text("Quitar de la lista").clicked() {
                                         eliminar = Some(i);
                                     }
                                     let dir = archivo.ruta.parent().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
-                                    ui.label(RichText::new(dir).size(10.0).color(Color32::from_rgb(140, 145, 160)));
+                                    ui.label(RichText::new(dir).size(14.0).color(Color32::from_rgb(140, 145, 160)));
                                 });
                             });
 
                             if !archivo.pistas.is_empty() {
                                 ui.horizontal(|ui| {
                                     ui.add_space(30.0);
-                                    ui.label(RichText::new("🎵").size(12.0).color(Color32::from_rgb(130, 100, 255)));
+                                    ui.label(RichText::new("🎵").size(16.0).color(Color32::from_rgb(130, 100, 255)));
 
                                     if archivo.pistas.len() == 1 {
                                         let p = &archivo.pistas[0];
-                                        ui.label(RichText::new(etiqueta_pista(p, 0)).size(11.0).color(Color32::from_rgb(110, 115, 130)));
+                                        ui.label(RichText::new(etiqueta_pista(p, 0)).size(15.0).color(Color32::from_rgb(110, 115, 130)));
                                     } else {
-                                        ui.label(RichText::new(format!("{} pistas — audio:", archivo.pistas.len())).size(11.0).color(Color32::from_rgb(110, 115, 130)));
+                                        ui.label(RichText::new(format!("{} pistas — audio:", archivo.pistas.len())).size(15.0).color(Color32::from_rgb(110, 115, 130)));
                                         let sel_label = etiqueta_pista(&archivo.pistas[archivo.pista_sel], archivo.pista_sel);
                                         
                                         egui::ComboBox::from_id_salt(egui::Id::new(("pista", i)))
-                                            .selected_text(RichText::new(sel_label).size(11.0).color(Color32::from_rgb(60, 65, 80)))
+                                            .selected_text(RichText::new(sel_label).size(15.0).color(Color32::from_rgb(60, 65, 80)))
                                             .width(280.0)
                                             .show_ui(ui, |ui| {
                                                 for (j, pista) in archivo.pistas.iter().enumerate() {
                                                     let etiq = etiqueta_pista(pista, j);
-                                                    ui.selectable_value(&mut archivo.pista_sel, j, RichText::new(etiq).size(12.0).color(Color32::from_rgb(40, 45, 60)));
+                                                    let is_sel = archivo.pista_sel == j;
+                                                    let col = if is_sel { Color32::WHITE } else { Color32::from_rgb(45, 50, 65) };
+                                                    ui.selectable_value(&mut archivo.pista_sel, j, RichText::new(etiq).size(14.0).color(col));
                                                 }
                                             });
                                     }
@@ -249,7 +367,7 @@ fn render_central_panel(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Contex
                             }
 
                             if let Estado::Error(ref msg) = archivo.estado {
-                                ui.label(RichText::new(msg).size(11.0).color(Color32::from_rgb(210, 60, 60)));
+                                ui.label(RichText::new(msg).size(13.0).color(Color32::from_rgb(210, 60, 60)));
                             }
                         });
                     ui.add_space(3.0);
@@ -263,7 +381,7 @@ fn render_central_panel(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Contex
 
         if !app.ffmpeg_ok {
             ui.separator();
-            ui.label(RichText::new("❌ FFmpeg no encontrado. Instálalo con: sudo apt install ffmpeg").color(Color32::from_rgb(220, 80, 80)).size(13.0));
+            ui.label(RichText::new("❌ FFmpeg no encontrado. Instálalo con: sudo apt install ffmpeg").color(Color32::from_rgb(220, 80, 80)).size(18.0));
         }
     });
 }

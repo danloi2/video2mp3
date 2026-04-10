@@ -1,0 +1,106 @@
+name: Multi-Platform Build
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: video2mp3-linux
+            asset_name: video2mp3-linux
+          - os: windows-latest
+            artifact_name: video2mp3-windows
+            asset_name: video2mp3-windows.exe
+          - os: macos-13
+            artifact_name: video2mp3-macos-intel
+            asset_name: video2mp3-macos-intel
+          - os: macos-latest
+            artifact_name: video2mp3-macos-arm
+            asset_name: video2mp3-macos-arm
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libspeechd-dev libgtk-3-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Prepare assets (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          mkdir dist
+          cp target/release/video2mp3 dist/${{ matrix.asset_name }}
+
+      - name: Prepare assets (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir dist
+          copy target\release\video2mp3.exe dist\${{ matrix.asset_name }}
+
+      - name: Upload to Actions Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/
+
+  release:
+    name: Create Release
+    needs: build
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: bin
+
+      - name: Move all files to one dir
+        run: |
+          mkdir assets
+          find bin -type f -exec cp {} assets/ \;
+
+      - name: Determine Tag
+        id: tag
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag_name=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag_name }}
+          name: ${{ steps.tag.outputs.tag_name == 'latest' && 'Latest Build' || steps.tag.outputs.tag_name }}
+          files: assets/*
+          draft: false
+          prerelease: ${{ steps.tag.outputs.tag_name == 'latest' }}
+          make_latest: ${{ steps.tag.outputs.tag_name != 'latest' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
