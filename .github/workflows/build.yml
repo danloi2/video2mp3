@@ -31,8 +31,7 @@ jobs:
             artifact: video2mp3-windows
             binary_name: video2mp3.exe
 
-          - os: macos-13
-            target: x86_64-apple-darwin
+          - os: macos-12           target: x86_64-apple-darwin
             artifact: video2mp3-macos-intel
             binary_name: video2mp3
 
