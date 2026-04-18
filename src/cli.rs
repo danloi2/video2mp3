@@ -32,7 +32,7 @@ pub fn run_cli_mode(args: Vec<String>) {
         archivos.sort();
 
         if archivos.is_empty() {
-            println!("⚠ No se encontraron archivos MKV, MP4 o AVI en el directorio actual");
+            println!("⚠ No se encontraron archivos MKV, MP4 o AVI en el directorio actual.");
             return;
         }
 
