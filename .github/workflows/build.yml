@@ -105,7 +105,7 @@ jobs:
 
       - name: Collect binaries
         run: |
-          mkdir assets
+          mkdir -p assets
           find dist -type f -exec cp {} assets/ \;
 
       - name: Get current tag
