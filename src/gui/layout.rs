@@ -63,7 +63,7 @@ fn render_top_panel(app: &mut ConvApp, ui: &mut egui::Ui, _ctx: &egui::Context) 
                     ui.add_space(8.0);
 
                     let (punto, txt, col) = if app.ytdlp_ok {
-                        ("●", " yt-dlp detectado".to_string(), Color32::from_rgb(45, 175, 80))
+                        ("●", " yt-dlp".to_string(), Color32::from_rgb(45, 175, 80))
                     } else {
                         ("●", " yt-dlp no encontrado".to_string(), Color32::from_rgb(220, 50, 50))
                     };
