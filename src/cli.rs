@@ -36,7 +36,7 @@ pub fn run_cli_mode(args: Vec<String>) {
             return;
         }
 
-        println!("📂  Se encontraron {} archivos de vídeo. Iniciando conversión...\n", archivos.len());
+        println!("📂 Se encontraron {} archivos de vídeo. Iniciando conversión...\n", archivos.len());
 
         let mut exitosos = 0;
         let cancelar     = Arc::new(AtomicBool::new(false));
