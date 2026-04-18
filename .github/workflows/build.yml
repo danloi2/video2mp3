@@ -126,15 +126,15 @@ jobs:
       - name: Generate changelog
         id: changelog
         run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64)
+          echo "log<<$EOF" >> $GITHUB_OUTPUT
           if [ -z "${{ steps.prevtag.outputs.prev }}" ]; then
-            echo "log<<EOF" >> $GITHUB_OUTPUT
-            git log --pretty=format:"- %s (%h)" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            git log -n 20 --pretty=format:"- %s (%h)" >> $GITHUB_OUTPUT
           else
-            echo "log<<EOF" >> $GITHUB_OUTPUT
             git log ${{ steps.prevtag.outputs.prev }}..HEAD --pretty=format:"- %s (%h)" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
           fi
+          echo "" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
