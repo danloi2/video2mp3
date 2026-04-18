@@ -13,6 +13,7 @@ use state::{Archivo, Msg};
 
 pub struct ConvApp {
     pub(crate) ffmpeg_ok:       bool,
+    pub(crate) ytdlp_ok:        bool,
     pub(crate) ffmpeg_version:  String,
     pub(crate) capacidades:     CapacidadesHardware,
     pub(crate) archivos:        Vec<Archivo>,
@@ -27,6 +28,8 @@ pub struct ConvApp {
     pub(crate) tipo_conversion: TipoConversion,
     pub(crate) opciones_video:  OpcionesVideo,
     pub(crate) primera_vez:     bool,
+    pub(crate) youtube_url:     String,
+    pub(crate) directorio_salida: Option<std::path::PathBuf>,
 }
 
 impl ConvApp {
@@ -44,8 +47,11 @@ impl ConvApp {
             Err(_) => None,
         };
 
+        use crate::core::verificar_ytdlp;
+
         Self {
             ffmpeg_ok:       verificar_ffmpeg(),
+            ytdlp_ok:        verificar_ytdlp(),
             ffmpeg_version:  obtener_version_ffmpeg(),
             capacidades:     detectar_capacidades_hardware(),
             archivos:        vec![],
@@ -59,6 +65,8 @@ impl ConvApp {
             tipo_conversion: TipoConversion::AudioMP3,
             opciones_video:  OpcionesVideo { preservar_grano: false, optimizar_color: true, aceleracion: AceleracionHW::Ninguna },
             primera_vez:     true,
+            youtube_url:     "".to_string(),
+            directorio_salida: None,
         }
     }
 }

@@ -16,6 +16,10 @@ pub fn verificar_ffmpeg() -> bool {
         && Command::new("ffprobe").arg("-version").output().is_ok()
 }
 
+pub fn verificar_ytdlp() -> bool {
+    Command::new("yt-dlp").arg("--version").output().is_ok()
+}
+
 pub fn obtener_version_ffmpeg() -> String {
     if let Ok(output) = Command::new("ffmpeg").arg("-version").output() {
         let stdout = String::from_utf8_lossy(&output.stdout);

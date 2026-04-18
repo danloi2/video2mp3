@@ -7,9 +7,118 @@ use rfd::FileDialog;
 
 use super::ConvApp;
 use super::state::{Archivo, Estado, Msg};
-use crate::core::{obtener_pistas, elegir_pista_defecto, convertir_archivo, TipoConversion};
+use crate::core::{obtener_pistas, elegir_pista_defecto, convertir_archivo, descargar_youtube, TipoConversion};
+use std::path::PathBuf;
 
 impl ConvApp {
+    pub(crate) fn seleccionar_directorio_salida(&mut self) {
+        if let Some(ruta) = FileDialog::new().pick_folder() {
+            self.directorio_salida = Some(ruta);
+        }
+    }
+
+    pub(crate) fn anadir_desde_youtube(&mut self, ctx: &egui::Context) {
+        let url = self.youtube_url.trim().to_string();
+        if url.is_empty() { return; }
+
+        let tipo = self.tipo_conversion;
+        let opciones = self.opciones_video;
+        let solo_audio = tipo == TipoConversion::AudioMP3;
+
+        self.archivos.push(Archivo {
+            ruta: PathBuf::from(if solo_audio { "YouTube (Audio...)" } else { "YouTube (Vídeo...)" }),
+            estado: Estado::Convirtiendo,
+            seleccionado: false,
+            pistas: vec![],
+            pista_sel: 0,
+        });
+        
+        let idx = self.archivos.len() - 1;
+        self.convirtiendo    = true;
+        self.progreso        = (0, 1);
+        self.progreso_actual = 0.0;
+        self.cancelar.store(false, Ordering::Relaxed);
+        self.log.push((true, format!("🌍 Iniciando YouTube: {}", url)));
+
+        let (tx, rx) = mpsc::channel();
+        self.rx = Some(rx);
+
+        let ctx2 = ctx.clone();
+        let cancel_flag = self.cancelar.clone();
+        
+        let destino = self.directorio_salida.clone().unwrap_or_else(|| {
+            dirs::download_dir().unwrap_or_else(|| {
+                std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+            })
+        });
+
+        thread::spawn(move || {
+            let tx2 = tx.clone();
+            let ctx3 = ctx2.clone();
+            
+            // 1. Descarga
+            let res_descarga = descargar_youtube(&url, &destino, solo_audio, cancel_flag.clone(), |update| {
+                match update {
+                    crate::core::ProgressUpdate::Ratio(ratio) => {
+                        let _ = tx2.send(Msg::Progreso(idx, ratio * 0.5)); // 50% para descarga
+                    }
+                    crate::core::ProgressUpdate::Playlist(cur, tot) => {
+                        let _ = tx2.send(Msg::PlaylistProgress(idx, cur, tot));
+                    }
+                }
+                ctx3.request_repaint();
+            });
+
+            match res_descarga {
+                Ok(ruta_descargada) => {
+                    if solo_audio {
+                        let msg = format!("✅ Audio descargado: {}", ruta_descargada.file_name().unwrap_or_default().to_string_lossy());
+                        let _ = tx.send(Msg::Resultado(idx, true, msg));
+                    } else {
+                        // 2. Conversión
+                        let _ = tx.send(Msg::Progreso(idx, 0.5));
+                        let _ = tx.send(Msg::Iniciando(idx));
+                        
+                        let ext = if tipo == TipoConversion::VideoH265 { "mkv" } else { "mkv" };
+                        let stem = ruta_descargada.file_stem().unwrap_or_default().to_string_lossy();
+                        let final_destino = destino.join(format!("{}.{}", stem, ext));
+
+                        let res_conv = convertir_archivo(
+                            &ruta_descargada,
+                            Some(&final_destino),
+                            0,    // Pista defecto
+                            true, // Sobreescribir si existe
+                            tipo,
+                            opciones,
+                            cancel_flag,
+                            |update| {
+                                if let crate::core::ProgressUpdate::Ratio(ratio) = update {
+                                    let _ = tx2.send(Msg::Progreso(idx, 0.5 + (ratio * 0.5))); // Otros 50%
+                                    ctx3.request_repaint();
+                                }
+                            }
+                        );
+
+                        match res_conv {
+                            Ok(m) => {
+                                let _ = tx.send(Msg::Resultado(idx, true, format!("✅ YouTube → {}", m)));
+                            }
+                            Err(e) => {
+                                let _ = tx.send(Msg::Resultado(idx, false, format!("❌ Error conversión: {}", e)));
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    let _ = tx.send(Msg::Resultado(idx, false, e));
+                }
+            }
+            let _ = tx.send(Msg::Finalizado);
+            ctx2.request_repaint();
+        });
+        
+        self.youtube_url.clear();
+    }
     pub(crate) fn anadir_archivos(&mut self) {
         let Some(rutas) = FileDialog::new()
             .add_filter("Vídeos soportados", &["mkv", "mp4", "avi", "MKV", "MP4", "AVI"])
@@ -90,7 +199,11 @@ impl ConvApp {
                 };
 
                 let stem = a.ruta.file_stem().unwrap_or_default().to_string_lossy();
-                let destino_path = a.ruta.parent().unwrap_or(Path::new(".")).join(format!("{}.{}", stem, ext));
+                
+                let destino_dir = self.directorio_salida.clone().unwrap_or_else(|| {
+                    a.ruta.parent().unwrap_or(Path::new(".")).to_path_buf()
+                });
+                let destino_path = destino_dir.join(format!("{}.{}", stem, ext));
                 
                 let mut sobreescribir = false;
                 if destino_path.exists() {
@@ -108,7 +221,7 @@ impl ConvApp {
                         continue;
                     }
                 }
-                pendientes.push((i, a.ruta.clone(), stream, sobreescribir));
+                pendientes.push((i, a.ruta.clone(), destino_path, stream, sobreescribir));
             }
         }
 
@@ -132,7 +245,7 @@ impl ConvApp {
         let opciones = self.opciones_video;
 
         thread::spawn(move || {
-            for (idx, ruta, stream, sobreescribir) in pendientes {
+            for (idx, ruta, destino_path, stream, sobreescribir) in pendientes {
                 let _ = tx.send(Msg::Iniciando(idx));
                 ctx2.request_repaint();
 
@@ -141,15 +254,17 @@ impl ConvApp {
                 let cancel_clone = cancel_flag.clone();
                 let (ok, msg) = match convertir_archivo(
                     &ruta,
-                    None,
+                    Some(&destino_path),
                     stream,
                     sobreescribir,
                     tipo,
                     opciones,
                     cancel_clone,
-                    move |ratio| {
-                        let _ = tx2.send(Msg::Progreso(idx, ratio));
-                        ctx3.request_repaint();
+                    move |update| {
+                        if let crate::core::ProgressUpdate::Ratio(ratio) = update {
+                            let _ = tx2.send(Msg::Progreso(idx, ratio));
+                            ctx3.request_repaint();
+                        }
                     },
                 ) {
                     Ok(m)  => (true,  m),
@@ -186,6 +301,13 @@ impl ConvApp {
                 }
                 Msg::Progreso(_idx, ratio) => {
                     self.progreso_actual = ratio;
+                }
+                Msg::PlaylistProgress(_idx, actual, total) => {
+                    // Si detectamos una lista, ajustamos el total global
+                    // para que refleje los items de la lista.
+                    self.progreso.1 = total;
+                    self.progreso.0 = actual - 1;
+                    self.progreso_actual = 0.0;
                 }
                 Msg::Resultado(idx, ok, text) => {
                     if let Some(a) = self.archivos.get_mut(idx) {

@@ -41,6 +41,7 @@ pub struct Archivo {
 pub enum Msg {
     Iniciando(usize),
     Progreso(usize, f32),
+    PlaylistProgress(usize, usize, usize), // idx, item_actual, item_total
     Resultado(usize, bool, String),
     Finalizado,
 }

@@ -61,6 +61,15 @@ fn render_top_panel(app: &mut ConvApp, ui: &mut egui::Ui, _ctx: &egui::Context) 
                     ui.label(RichText::new(format!("{}{}", punto, txt)).color(col).size(16.0));
 
                     ui.add_space(8.0);
+
+                    let (punto, txt, col) = if app.ytdlp_ok {
+                        ("●", " yt-dlp detectado".to_string(), Color32::from_rgb(45, 175, 80))
+                    } else {
+                        ("●", " yt-dlp no encontrado".to_string(), Color32::from_rgb(220, 50, 50))
+                    };
+                    ui.label(RichText::new(format!("{}{}", punto, txt)).color(col).size(16.0));
+
+                    ui.add_space(8.0);
                     render_hw_tags(ui, &app.capacidades);
                 });
             });
@@ -226,6 +235,45 @@ fn render_central_panel(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Contex
 
         ui.add_space(8.0);
 
+        // --- Opción YouTube ---
+        egui::Frame::new()
+            .fill(Color32::from_rgb(240, 245, 255))
+            .corner_radius(cr(8))
+            .inner_margin(Margin::same(10_i8))
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("YouTube:").strong().size(18.0));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut app.youtube_url)
+                            .hint_text("https://www.youtube.com/watch?v=...")
+                            .desired_width(400.0)
+                    );
+                    
+                    let ytdlp_ok = app.ytdlp_ok;
+                    use crate::core::TipoConversion;
+                    let (btn_txt, btn_col) = if app.tipo_conversion == TipoConversion::AudioMP3 {
+                        ("📥  Descargar MP3", Color32::from_rgb(230, 33, 23))
+                    } else {
+                        ("📥  Descargar Vídeo", Color32::from_rgb(30, 150, 230))
+                    };
+
+                    let btn = ui.add_enabled(
+                        ytdlp_ok && !app.convirtiendo && !app.youtube_url.is_empty(),
+                        egui::Button::new(RichText::new(btn_txt).color(Color32::WHITE)).fill(btn_col)
+                    );
+
+                    if btn.clicked() {
+                        app.anadir_desde_youtube(ctx);
+                    }
+
+                    if !ytdlp_ok {
+                        ui.label(RichText::new("⚠ yt-dlp no encontrado").color(Color32::RED).size(14.0));
+                    }
+                });
+            });
+
+        ui.add_space(8.0);
+
         // --- Panel de Opciones de Conversión ---
         egui::Frame::new()
             .fill(Color32::from_rgb(245, 247, 250))
@@ -302,6 +350,37 @@ fn render_central_panel(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Contex
                             hw_button(ui, AceleracionHW::VAAPI,   "🐧 Linux (VAAPI)",   app.capacidades.vaapi);
                             hw_button(ui, AceleracionHW::VideoToolbox, "🍎 Apple (VTB)", app.capacidades.vtb);
                         });
+                });
+
+                ui.add_space(6.0);
+                ui.separator();
+                ui.add_space(6.0);
+
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("Directorio de salida:").strong().size(17.0));
+                    
+                    let txt = match &app.directorio_salida {
+                        Some(p) => p.to_string_lossy().to_string(),
+                        None => "Predeterminado (mismo que origen / Descargas)".to_string(),
+                    };
+
+                    egui::Frame::new()
+                        .fill(Color32::from_rgb(230, 235, 245))
+                        .corner_radius(cr(4))
+                        .inner_margin(Margin::symmetric(8_i8, 4_i8))
+                        .show(ui, |ui| {
+                            ui.label(RichText::new(txt).size(15.0).color(Color32::from_rgb(60, 70, 90)));
+                        });
+
+                    if ui.button("📂 Cambiar").clicked() {
+                        app.seleccionar_directorio_salida();
+                    }
+
+                    if app.directorio_salida.is_some() {
+                        if ui.button("↺ Reset").on_hover_text("Volver al directorio predeterminado").clicked() {
+                            app.directorio_salida = None;
+                        }
+                    }
                 });
             });
 

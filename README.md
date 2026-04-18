@@ -10,6 +10,7 @@
 
 ![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
 ![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)
+![yt-dlp](https://img.shields.io/badge/yt--dlp-FF0000?style=for-the-badge&logo=youtube&logoColor=white)
 ![egui](https://img.shields.io/badge/egui-FF5722?style=for-the-badge&logo=rust&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 ![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white)
@@ -25,24 +26,25 @@ The project is built on the pillars of **native performance**, **user-centric de
 
 ## ✨ Key Features
 
-### 🚀 Hardware Acceleration (NEW!)
+### 🌍 YouTube & Playlists (NEW!)
+- **Direct Download**: Paste any YouTube link to extract audio (MP3) or download video in the best quality available.
+- **Full Playlist Support**: Detects and processes entire playlists automatically, with item-by-item progress tracking.
+- **Smart Conversion**: Downloaded videos can be automatically converted to H.264/H.265 MKV in a single step using your preferred hardware acceleration.
+
+### 🚀 Hardware Acceleration
 - **Automatic Detection**: Probes your PC to find NVIDIA (NVENC), Intel (QSV), AMD (AMF/VAAPI), or Apple (VideoToolbox) chips.
 - **Smart UI Tags**: Visual badges show you exactly what hardware is active and usable in your system.
 - **Turbo Encoding**: Up to 10x faster processing in supported GPUs compared to CPU-only encoding.
 
 ### 🎥 High-Performance Processing
 - **Batch Conversion**: Drag and drop multiple MKV, MP4, or AVI files and process them sequentially in the background.
-- **FFmpeg 7.x Support**: Optimized for the latest media engines.
+- **Custom Output Directory**: Choose exactly where your files go. If not set, it defaults to the source folder (for files) or your Downloads folder (for YouTube).
 - **Smart Resource Management**: Real-time progress tracking through stdout pipelines without blocking the GUI.
 
 ### 🎛️ Smart Audio Management
 - **Automatic Track Detection**: Uses `ffprobe` to scan all available audio streams inside media containers.
 - **Language Priority**: Automatically detects and pre-selects the Spanish track (SPA/ES) by default.
 - **Manual Override**: Intuitive dropdown menus allow users to select any specific audio track.
-
-### 🍎 Cross-Platform Excellence
-- **Universal Binaries**: Native support for **Apple Silicon (M1/M2/M3)** and **Intel Mac**.
-- **Windows & Linux**: Fully tested on Windows 11 and Fedora/Ubuntu (Wayland support).
 
 ---
 
@@ -52,8 +54,8 @@ The project is built on the pillars of **native performance**, **user-centric de
 | :-------------------- | :----------------------------------------------------------------------------------------- |
 | **Core Language**     | [Rust](https://www.rust-lang.org/)                                                         |
 | **GUI Framework**     | [eframe](https://docs.rs/eframe/latest/eframe/) + [egui](https://github.com/emilk/egui)    |
+| **Media Engines**     | [FFmpeg](https://ffmpeg.org/) + [ffprobe](https://ffmpeg.org/ffprobe.html) + [yt-dlp](https://github.com/yt-dlp/yt-dlp) |
 | **Hardware APIs**     | NVENC, QSV, VAAPI, AMF, Apple VideoToolbox                                                 |
-| **Media Engine**      | [FFmpeg](https://ffmpeg.org/) + [ffprobe](https://ffmpeg.org/ffprobe.html)                 |
 | **Automation**        | GitHub Actions (Multi-platform Builds)                                                     |
 
 ---
@@ -63,6 +65,7 @@ The project is built on the pillars of **native performance**, **user-centric de
 ### Prerequisites
 
 - **FFmpeg (v4.0+)** available in your system's `$PATH`.
+- **yt-dlp** (Optional but recommended) for YouTube download features.
 - For Hardware Acceleration: Updated GPU drivers (NVIDIA/Intel/AMD/Apple).
 
 **Quick Download:**
@@ -72,7 +75,8 @@ You can find the latest pre-compiled binaries for your system in the [**Releases
 
 1. **Clone the repository** and navigate to the root directory:
    ```bash
-   cd video2mp3
+   git clone https://github.com/danloi2/convmp3.git
+   cd convmp3
    ```
 
 2. **Build and Run**:
@@ -89,7 +93,7 @@ You can find the latest pre-compiled binaries for your system in the [**Releases
 This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for more information.
 
 - **Source Code**: Open-source, free to use, modify, and distribute.
-- **Dependencies**: Relies on system-installed FFmpeg binaries (not bundled), which may have their own licensing guidelines (e.g., GPL/LGPL).
+- **Dependencies**: Relies on system-installed FFmpeg and yt-dlp binaries (not bundled), which may have their own licensing guidelines (e.g., GPL/LGPL).
 
 ---
 

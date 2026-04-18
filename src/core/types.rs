@@ -29,3 +29,9 @@ pub struct PistaAudio {
     pub idioma: String,
 }
 
+#[derive(Clone, Debug, Copy)]
+pub enum ProgressUpdate {
+    Ratio(f32),
+    Playlist(usize, usize), // (actual, total)
+}
+

@@ -16,7 +16,7 @@ pub fn convertir_archivo<F>(
     on_progress: F,
 ) -> Result<String, String>
 where
-    F: Fn(f32),
+    F: Fn(crate::core::ProgressUpdate),
 {
     let stem = origen
         .file_stem()
@@ -205,7 +205,7 @@ where
                     if us > 0 && duracion_s > 0.0 {
                         let ratio =
                             ((us as f64 / 1_000_000.0) / duracion_s).clamp(0.0, 1.0) as f32;
-                        on_progress(ratio);
+                        on_progress(crate::core::ProgressUpdate::Ratio(ratio));
                     }
                 }
             }
@@ -231,5 +231,106 @@ where
             "❌ ffmpeg falló al convertir '{}'",
             origen.file_name().unwrap_or_default().to_string_lossy()
         ))
+    }
+}
+
+pub fn obtener_nombre_youtube(url: &str) -> Option<String> {
+    let output = Command::new("yt-dlp")
+        .args(["--get-filename", "-o", "%(title)s.%(ext)s", url])
+        .output()
+        .ok()?;
+    
+    if output.status.success() {
+        let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if !name.is_empty() {
+            return Some(name);
+        }
+    }
+    None
+}
+
+pub fn descargar_youtube<F>(
+    url: &str,
+    destino: &Path,
+    solo_audio: bool,
+    cancelar: Arc<AtomicBool>,
+    on_progress: F,
+) -> Result<PathBuf, String>
+where
+    F: Fn(crate::core::ProgressUpdate),
+{
+    let mut args = vec!["--newline".to_string()];
+    
+    if solo_audio {
+        args.push("-x".to_string());
+        args.push("--audio-format".to_string());
+        args.push("mp3".to_string());
+    }
+
+    let template = if solo_audio {
+        "%(title)s.mp3"
+    } else {
+        "%(title)s.%(ext)s"
+    };
+
+    args.push("-o".to_string());
+    args.push(format!("{}/{}", destino.to_string_lossy(), template));
+    args.push(url.to_string());
+
+    let mut child = Command::new("yt-dlp")
+        .args(&args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| format!("No se pudo lanzar yt-dlp: {}", e))?;
+
+    if let Some(stdout) = child.stdout.take() {
+        let mut cancelado = false;
+        for line in std::io::BufReader::new(stdout).lines().map_while(Result::ok) {
+            if cancelar.load(Ordering::Relaxed) {
+                child.kill().ok();
+                cancelado = true;
+                break;
+            }
+            // Playlist progress: [download] Downloading item 1 of 2
+            if line.contains("Downloading item") && line.contains("of") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if let (Some(pos_item), Some(pos_of)) = (parts.iter().position(|&s| s == "item"), parts.iter().position(|&s| s == "of")) {
+                    if let (Ok(cur), Ok(tot)) = (parts[pos_item+1].parse::<usize>(), parts[pos_of+1].parse::<usize>()) {
+                        on_progress(crate::core::ProgressUpdate::Playlist(cur, tot));
+                    }
+                }
+            }
+
+            if line.contains("[download]") && line.contains('%') {
+                if let Some(pos) = line.find('%') {
+                    let start = line[..pos].rfind(' ').unwrap_or(0);
+                    if let Ok(p) = line[start..pos].trim().parse::<f32>() {
+                        on_progress(crate::core::ProgressUpdate::Ratio(p / 100.0));
+                    }
+                }
+            }
+        }
+        if cancelado {
+            let _ = child.wait();
+            return Err("⏹ Descarga de YouTube cancelada".to_string());
+        }
+    }
+
+    let status = child.wait().map_err(|e| e.to_string())?;
+
+    if status.success() {
+        // Obtenemos el nombre final (un poco redundante pero seguro)
+        if let Some(nombre) = obtener_nombre_youtube(url) {
+            let mut ruta = destino.to_path_buf().join(nombre);
+            if solo_audio {
+                ruta.set_extension("mp3");
+            }
+            Ok(ruta)
+        } else {
+            Ok(destino.to_path_buf()) // fallback
+        }
+    } else {
+        Err("❌ yt-dlp falló al descargar".to_string())
     }
 }
