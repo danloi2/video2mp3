@@ -47,7 +47,7 @@ fn render_top_panel(app: &mut ConvApp, ui: &mut egui::Ui, _ctx: &egui::Context) 
                         .strong(),
                 );
                 ui.label(
-                    RichText::new("— Conversor de vídeo a MP3")
+                    RichText::new("— Conversor de vídeo a MP3 con ffmpeg y yt-dlp")
                         .size(18.0)
                         .color(Color32::from_rgb(100, 105, 120)),
                 );
