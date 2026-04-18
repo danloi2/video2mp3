@@ -36,7 +36,7 @@ impl ConvApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         theme::aplicar_tema(&cc.egui_ctx);
         
-        let logo_texture = match image::load_from_memory(include_bytes!("../../assets/icon.png")) {
+        let logo_texture = match image::load_from_memory(include_bytes!("../../resources/icon.png")) {
             Ok(img) => {
                 let img = img.to_rgba8();
                 let size = [img.width() as usize, img.height() as usize];

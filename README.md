@@ -1,7 +1,7 @@
 # video2mp3 🎵
 
 <p align="center">
-  <img src="assets/icon.png" width="180" alt="video2mp3 Logo">
+  <img src="resources/icon.png" width="180" alt="video2mp3 Logo">
 </p>
 
 > **A blazingly fast, native video & audio re-encoder with hardware acceleration.**

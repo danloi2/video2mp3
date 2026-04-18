@@ -13,7 +13,7 @@ fn main() {
             .with_min_inner_size([1100.0, 800.0])
             .with_drag_and_drop(true);
 
-        if let Ok(img) = image::load_from_memory(include_bytes!("../assets/icon.png")) {
+        if let Ok(img) = image::load_from_memory(include_bytes!("../resources/icon.png")) {
             let img_rgba = img.to_rgba8();
             let (width, height) = img_rgba.dimensions();
             let icon_data = eframe::egui::IconData {
