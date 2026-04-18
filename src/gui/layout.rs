@@ -56,7 +56,7 @@ fn render_top_panel(app: &mut ConvApp, ui: &mut egui::Ui, _ctx: &egui::Context) 
                     let (punto, txt, col) = if app.ffmpeg_ok {
                         ("●", format!(" FFmpeg {}", app.ffmpeg_version), Color32::from_rgb(45, 175, 80))
                     } else {
-                        ("●", " FFmpeg no encontrado".to_string(), Color32::from_rgb(220, 50, 50))
+                        ("●", " Sin ffmpeg".to_string(), Color32::from_rgb(220, 50, 50))
                     };
                     ui.label(RichText::new(format!("{}{}", punto, txt)).color(col).size(16.0));
 
@@ -65,7 +65,7 @@ fn render_top_panel(app: &mut ConvApp, ui: &mut egui::Ui, _ctx: &egui::Context) 
                     let (punto, txt, col) = if app.ytdlp_ok {
                         ("●", " yt-dlp".to_string(), Color32::from_rgb(45, 175, 80))
                     } else {
-                        ("●", " yt-dlp no encontrado".to_string(), Color32::from_rgb(220, 50, 50))
+                        ("●", " Sin yt-dlp".to_string(), Color32::from_rgb(220, 50, 50))
                     };
                     ui.label(RichText::new(format!("{}{}", punto, txt)).color(col).size(16.0));
 
