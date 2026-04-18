@@ -31,11 +31,6 @@ jobs:
             artifact: video2mp3-windows
             binary_name: video2mp3.exe
 
-          - os: macos-12
-            target: x86_64-apple-darwin
-            artifact: video2mp3-macos-intel
-            binary_name: video2mp3
-
           - os: macos-14
             target: aarch64-apple-darwin
             artifact: video2mp3-macos-arm
@@ -151,8 +146,7 @@ jobs:
             ## 📦 Downloads
             - Windows
             - Linux
-            - macOS Intel
-            - macOS Apple Silicon
+            - macOS Apple Silicon (ARM)
           files: assets/*
           draft: false
           prerelease: false
