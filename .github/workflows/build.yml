@@ -106,7 +106,9 @@ jobs:
       - name: Collect binaries
         run: |
           mkdir -p assets
-          find dist -type f -exec cp {} assets/ \;
+          cp dist/video2mp3-linux/video2mp3 assets/video2mp3-linux
+          cp dist/video2mp3-windows/video2mp3.exe assets/video2mp3-windows.exe
+          cp dist/video2mp3-macos-arm/video2mp3 assets/video2mp3-macos-arm
 
       - name: Get current tag
         id: tag
