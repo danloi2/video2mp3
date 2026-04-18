@@ -142,7 +142,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-          name: ${{ steps.tag.outputs.tag == 'latest' && 'Latest Continuous Build' || format('Video2MP3 {0}', steps.tag.outputs.tag) }}
+          name: ${{ steps.tag.outputs.tag == 'latest' || steps.tag.outputs.tag == 'manual-release' ? 'Latest Continuous Build' : steps.tag.outputs.tag }}
           body: |
             ## 🚀 Changelog
 
@@ -150,10 +150,10 @@ jobs:
 
             ---
 
-            ## 📦 Downloads
+            ## 📦 Binaries
             - Windows
             - Linux
-            - macOS Apple Silicon (ARM)
+            - macOS
           files: assets/*
           draft: false
           prerelease: false
