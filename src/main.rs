@@ -35,7 +35,7 @@ fn main() {
             options,
             Box::new(|cc| Ok(Box::new(gui::ConvApp::new(cc)))),
         )
-        .expect("Error al iniciar la interfaz gráfic");
+        .expect("Error al iniciar la interfaz gráfica");
         return;
     }
 
