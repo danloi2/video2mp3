@@ -6,7 +6,7 @@
 
 > **A blazingly fast, native video & audio re-encoder with hardware acceleration.**
 
-**video2mp3** is a modern, high-performance desktop application designed to effortlessly extract audio or re-encode video files. It combines the raw processing power of FFmpeg with a premium graphical interface, providing all the essential tools for both single-file and batch  conversions.
+**video2mp3** is a modern, high-performance desktop application designed to effortlessly extract audio or re-encode video files. It combines the raw processing power of FFmpeg with a premium graphical interface, providing all the essential tools for both single-file and batch   conversions.
 
 ![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
 ![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)
