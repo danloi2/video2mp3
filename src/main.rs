@@ -8,7 +8,7 @@ fn main() {
     // Sin argumentos → interfaz gráfica
     if args.len() < 2 {
         let mut viewport = eframe::egui::ViewportBuilder::default()
-            .with_title("video2mp3 — Conversor de vídeo a MP3")
+            .with_title("video2mp3 — Descarga o Convierte")
             .with_inner_size([1100.0, 800.0])
             .with_min_inner_size([1100.0, 800.0])
             .with_drag_and_drop(true);
