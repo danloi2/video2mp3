@@ -35,6 +35,13 @@ pub fn obtener_version_ffmpeg() -> String {
     "desconocido".to_string()
 }
 
+pub fn obtener_version_ytdlp() -> String {
+    if let Ok(output) = Command::new("yt-dlp").arg("--version").output() {
+        return String::from_utf8_lossy(&output.stdout).trim().to_string();
+    }
+    "desconocido".to_string()
+}
+
 pub fn detectar_capacidades_hardware() -> CapacidadesHardware {
     let mut caps = CapacidadesHardware::default();
     

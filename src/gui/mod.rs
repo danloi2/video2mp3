@@ -8,13 +8,14 @@ use std::sync::{Arc, atomic::AtomicBool};
 use std::sync::mpsc::Receiver;
 use eframe::egui;
 
-use crate::core::{verificar_ffmpeg, TipoConversion, OpcionesVideo, obtener_version_ffmpeg, CapacidadesHardware, detectar_capacidades_hardware, AceleracionHW};
+use crate::core::{verificar_ffmpeg, TipoConversion, OpcionesVideo, obtener_version_ffmpeg, obtener_version_ytdlp, CapacidadesHardware, detectar_capacidades_hardware, AceleracionHW};
 use state::{Archivo, Msg};
 
 pub struct ConvApp {
     pub(crate) ffmpeg_ok:       bool,
     pub(crate) ytdlp_ok:        bool,
     pub(crate) ffmpeg_version:  String,
+    pub(crate) ytdlp_version:   String,
     pub(crate) capacidades:     CapacidadesHardware,
     pub(crate) archivos:        Vec<Archivo>,
     pub(crate) log:             Vec<(bool, String)>,
@@ -53,6 +54,7 @@ impl ConvApp {
             ffmpeg_ok:       verificar_ffmpeg(),
             ytdlp_ok:        verificar_ytdlp(),
             ffmpeg_version:  obtener_version_ffmpeg(),
+            ytdlp_version:   obtener_version_ytdlp(),
             capacidades:     detectar_capacidades_hardware(),
             archivos:        vec![],
             log:             vec![],
