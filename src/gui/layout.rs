@@ -250,15 +250,11 @@ fn render_central_panel(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Contex
                     );
                     
                     let ytdlp_ok = app.ytdlp_ok;
-                    use crate::core::TipoConversion;
-                    let (btn_txt, btn_col) = if app.tipo_conversion == TipoConversion::AudioMP3 {
-                        ("📥  Descargar MP3", Color32::from_rgb(230, 33, 23))
-                    } else {
-                        ("📥  Descargar Vídeo", Color32::from_rgb(30, 150, 230))
-                    };
+                    let btn_txt = "➕ Añadir a la lista";
+                    let btn_col = Color32::from_rgb(115, 85, 225);
 
                     let btn = ui.add_enabled(
-                        ytdlp_ok && !app.convirtiendo && !app.youtube_url.is_empty(),
+                        ytdlp_ok && !app.youtube_url.is_empty(),
                         egui::Button::new(RichText::new(btn_txt).color(Color32::WHITE)).fill(btn_col)
                     );
 

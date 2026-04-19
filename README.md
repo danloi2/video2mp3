@@ -27,9 +27,9 @@ The project is built on the pillars of **native performance**, **user-centric de
 ## ✨ Key Features
 
 ### 🌍 YouTube & Playlists (NEW!)
-- **Direct Download**: Paste any YouTube link to extract audio (MP3) or download video in the best quality available.
+- **Smart Staged Workflow**: Paste a YouTube link to instantly analyze and add it to your list. The title is fetched in the background while you prepare the rest of your queue.
 - **Full Playlist Support**: Detects and processes entire playlists automatically, with item-by-item progress tracking.
-- **Smart Conversion**: Downloaded videos can be automatically converted to H.264/H.265 MKV in a single step using your preferred hardware acceleration.
+- **Versatile Conversion**: Choose your output format (MP3, H.264, or H.265) and hit "Convert" to process all local and YouTube tasks in a single batch.
 
 ### 🚀 Hardware Acceleration
 - **Automatic Detection**: Probes your PC to find NVIDIA (NVENC), Intel (QSV), AMD (AMF/VAAPI), or Apple (VideoToolbox) chips.
@@ -37,9 +37,9 @@ The project is built on the pillars of **native performance**, **user-centric de
 - **Turbo Encoding**: Up to 10x faster processing in supported GPUs compared to CPU-only encoding.
 
 ### 🎥 High-Performance Processing
+- **Deep Media Probing**: Automatically displays the container format, video codec, and main audio codec for local files using visual tags.
 - **Batch Conversion**: Drag and drop multiple MKV, MP4, or AVI files and process them sequentially in the background.
 - **Custom Output Directory**: Choose exactly where your files go. If not set, it defaults to the source folder (for files) or your Downloads folder (for YouTube).
-- **Smart Resource Management**: Real-time progress tracking through stdout pipelines without blocking the GUI.
 
 ### 🎛️ Smart Audio Management
 - **Automatic Track Detection**: Uses `ffprobe` to scan all available audio streams inside media containers.
