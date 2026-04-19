@@ -7,7 +7,7 @@ use rfd::FileDialog;
 
 use super::ConvApp;
 use super::state::{Archivo, Estado, Msg};
-use crate::core::{obtener_pistas, elegir_pista_defecto, convertir_archivo, descargar_youtube, TipoConversion};
+use crate::core::{obtener_pistas, elegir_pista_defecto, convertir_archivo, descargar_youtube, TipoConversion, obtener_info_media};
 use std::path::PathBuf;
 
 impl ConvApp {
@@ -31,6 +31,7 @@ impl ConvApp {
             seleccionado: false,
             pistas: vec![],
             pista_sel: 0,
+            info: None,
         });
         
         let idx = self.archivos.len() - 1;
@@ -171,12 +172,14 @@ impl ConvApp {
         if !self.archivos.iter().any(|a| a.ruta == ruta) {
             let pistas    = obtener_pistas(&ruta.to_string_lossy());
             let pista_sel = elegir_pista_defecto(&pistas);
+            let info      = obtener_info_media(&ruta.to_string_lossy());
             self.archivos.push(Archivo {
                 ruta,
                 estado: Estado::Pendiente,
                 seleccionado: true,
                 pistas,
                 pista_sel,
+                info,
             });
             return true;
         }
@@ -345,6 +348,7 @@ impl ConvApp {
                                 seleccionado: true,
                                 pistas,
                                 pista_sel,
+                                info: obtener_info_media(&ruta.to_string_lossy()),
                             });
                             self.log.push((true, format!("↓ Añadido: {}", nombre)));
                         }

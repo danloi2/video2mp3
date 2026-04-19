@@ -29,6 +29,13 @@ pub struct PistaAudio {
     pub idioma: String,
 }
 
+#[derive(Clone, Debug)]
+pub struct InfoMedia {
+    pub contenedor: String,
+    pub v_codec:    Option<String>,
+    pub a_codec:    Option<String>,
+}
+
 #[derive(Clone, Debug, Copy)]
 pub enum ProgressUpdate {
     Ratio(f32),

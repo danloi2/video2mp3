@@ -165,3 +165,44 @@ pub(crate) fn obtener_duracion_s(archivo: &str) -> Option<f64> {
         .parse::<f64>()
         .ok()
 }
+
+pub fn obtener_info_media(archivo: &str) -> Option<super::types::InfoMedia> {
+    let output = Command::new("ffprobe")
+        .args([
+            "-v", "error",
+            "-show_entries", "format=format_name:stream=codec_name,codec_type",
+            "-of", "json",
+            archivo,
+        ])
+        .output()
+        .ok()?;
+
+    let json: Value = serde_json::from_slice(&output.stdout).ok()?;
+    
+    let contenedor = json["format"]["format_name"]
+        .as_str()
+        .unwrap_or("?")
+        .to_string();
+
+    let mut v_codec = None;
+    let mut a_codec = None;
+
+    if let Some(streams) = json["streams"].as_array() {
+        for s in streams {
+            let tipo = s["codec_type"].as_str().unwrap_or("");
+            let codec = s["codec_name"].as_str().map(|c| c.to_string());
+            
+            if tipo == "video" && v_codec.is_none() {
+                v_codec = codec;
+            } else if tipo == "audio" && a_codec.is_none() {
+                a_codec = codec;
+            }
+        }
+    }
+
+    Some(super::types::InfoMedia {
+        contenedor,
+        v_codec,
+        a_codec,
+    })
+}

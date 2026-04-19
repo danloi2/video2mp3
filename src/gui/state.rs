@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use eframe::egui::Color32;
-use crate::core::PistaAudio;
+use crate::core::{PistaAudio, InfoMedia};
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Estado {
@@ -36,6 +36,7 @@ pub struct Archivo {
     pub seleccionado: bool,
     pub pistas:      Vec<PistaAudio>, // pistas de audio detectadas
     pub pista_sel:   usize,           // índice en `pistas` elegido por el usuario
+    pub info:        Option<InfoMedia>,
 }
 
 pub enum Msg {

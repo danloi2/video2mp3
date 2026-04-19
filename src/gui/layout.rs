@@ -418,6 +418,20 @@ fn render_central_panel(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Contex
                                 });
                             });
 
+                            if let Some(info) = &archivo.info {
+                                ui.horizontal(|ui| {
+                                    ui.add_space(34.0);
+                                    ui.spacing_mut().item_spacing.x = 4.0;
+                                    tag(ui, &info.contenedor.to_uppercase(), Color32::from_rgb(100, 110, 130));
+                                    if let Some(vc) = &info.v_codec {
+                                        tag(ui, &vc.to_uppercase(), Color32::from_rgb(60, 120, 200));
+                                    }
+                                    if let Some(ac) = &info.a_codec {
+                                        tag(ui, &ac.to_uppercase(), Color32::from_rgb(180, 100, 40));
+                                    }
+                                });
+                            }
+
                             if !archivo.pistas.is_empty() {
                                 ui.horizontal(|ui| {
                                     ui.add_space(30.0);
