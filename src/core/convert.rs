@@ -236,7 +236,7 @@ where
 
 pub fn obtener_nombre_youtube(url: &str) -> Option<String> {
     let output = Command::new("yt-dlp")
-        .args(["--get-filename", "-o", "%(title)s.%(ext)s", url])
+        .args(["--get-filename", "--restrict-filenames", "--no-playlist", "-o", "%(title)s.%(ext)s", url])
         .output()
         .ok()?;
     
@@ -249,6 +249,36 @@ pub fn obtener_nombre_youtube(url: &str) -> Option<String> {
     None
 }
 
+pub fn obtener_videos_playlist<F>(url: &str, mut on_video: F)
+where
+    F: FnMut(String, String),
+{
+    let child = Command::new("yt-dlp")
+        .args(["--flat-playlist", "--print", "%(url)s\t%(title)s", url])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok();
+
+    if let Some(mut c) = child {
+        if let Some(stdout) = c.stdout.take() {
+            use std::io::BufRead;
+            for line in std::io::BufReader::new(stdout).lines().map_while(Result::ok) {
+                let parts: Vec<&str> = line.splitn(2, '\t').collect();
+                if parts.len() == 2 {
+                    on_video(parts[0].to_string(), parts[1].to_string());
+                }
+            }
+        }
+        let _ = c.wait();
+    } else {
+        // Fallback si no se pudo lanzar o no es lista
+        if let Some(titulo) = obtener_nombre_youtube(url) {
+            on_video(url.to_string(), titulo);
+        }
+    }
+}
+
 pub fn descargar_youtube<F>(
     url: &str,
     destino: &Path,
@@ -259,7 +289,7 @@ pub fn descargar_youtube<F>(
 where
     F: Fn(crate::core::ProgressUpdate),
 {
-    let mut args = vec!["--newline".to_string()];
+    let mut args = vec!["--newline".to_string(), "--restrict-filenames".to_string()];
     
     if solo_audio {
         args.push("-x".to_string());
@@ -273,14 +303,16 @@ where
         "%(title)s.%(ext)s"
     };
 
+    let full_template = destino.join(template);
+
     args.push("-o".to_string());
-    args.push(format!("{}/{}", destino.to_string_lossy(), template));
+    args.push(full_template.to_string_lossy().to_string());
     args.push(url.to_string());
 
     let mut child = Command::new("yt-dlp")
         .args(&args)
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| format!("No se pudo lanzar yt-dlp: {}", e))?;
 
@@ -317,6 +349,12 @@ where
         }
     }
 
+    let mut stderr_content = String::new();
+    if let Some(mut stderr) = child.stderr.take() {
+        use std::io::Read;
+        let _ = stderr.read_to_string(&mut stderr_content);
+    }
+
     let status = child.wait().map_err(|e| e.to_string())?;
 
     if status.success() {
@@ -331,6 +369,11 @@ where
             Ok(destino.to_path_buf()) // fallback
         }
     } else {
-        Err("❌ yt-dlp falló al descargar".to_string())
+        let err_msg = if stderr_content.is_empty() {
+            "Error desconocido en yt-dlp".to_string()
+        } else {
+            stderr_content.lines().last().unwrap_or("Error en yt-dlp").to_string()
+        };
+        Err(format!("❌ {}", err_msg))
     }
 }

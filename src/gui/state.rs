@@ -45,6 +45,6 @@ pub enum Msg {
     Progreso(usize, f32),
     PlaylistProgress(usize, usize, usize), // idx, item_actual, item_total
     Resultado(usize, bool, String),
-    ActualizarRuta(usize, PathBuf),
+    AnadirArchivosYoutube(Vec<(String, String)>),
     Finalizado,
 }

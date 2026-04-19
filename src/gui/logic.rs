@@ -7,7 +7,7 @@ use rfd::FileDialog;
 
 use super::ConvApp;
 use super::state::{Archivo, Estado, Msg};
-use crate::core::{obtener_pistas, elegir_pista_defecto, convertir_archivo, descargar_youtube, TipoConversion, obtener_info_media, obtener_nombre_youtube};
+use crate::core::{obtener_pistas, elegir_pista_defecto, convertir_archivo, descargar_youtube, TipoConversion, obtener_info_media, obtener_videos_playlist};
 use std::path::PathBuf;
 
 impl ConvApp {
@@ -21,32 +21,18 @@ impl ConvApp {
         let url = self.youtube_url.trim().to_string();
         if url.is_empty() { return; }
 
-        self.archivos.push(Archivo {
-            ruta: PathBuf::from("YouTube (Cargando título...)"),
-            estado: Estado::Pendiente,
-            seleccionado: true,
-            pistas: vec![],
-            pista_sel: 0,
-            info: None,
-            youtube_url: Some(url.clone()),
-        });
-        
-        let idx = self.archivos.len() - 1;
+        self.convirtiendo = true;
         let (tx, rx) = mpsc::channel();
         self.rx = Some(rx);
-        self.convirtiendo = true;
 
         let ctx2 = ctx.clone();
+        let tx2 = tx.clone();
         thread::spawn(move || {
-            if let Some(nombre) = obtener_nombre_youtube(&url) {
-                let path_nombre = PathBuf::from(nombre);
-                let _ = tx.send(Msg::ActualizarRuta(idx, path_nombre));
-                let _ = tx.send(Msg::Finalizado);
-                ctx2.request_repaint();
-            } else {
-                let _ = tx.send(Msg::Finalizado);
-                ctx2.request_repaint();
-            }
+            obtener_videos_playlist(&url, |u, t| {
+                let _ = tx2.send(Msg::AnadirArchivosYoutube(vec![(u, t)]));
+            });
+            let _ = tx.send(Msg::Finalizado);
+            ctx2.request_repaint();
         });
         
         self.youtube_url.clear();
@@ -136,7 +122,10 @@ impl ConvApp {
                 let stem = a.ruta.file_stem().unwrap_or_default().to_string_lossy();
                 
                 let destino_dir = self.directorio_salida.clone().unwrap_or_else(|| {
-                    a.ruta.parent().unwrap_or(Path::new(".")).to_path_buf()
+                    a.ruta.parent()
+                        .filter(|p| !p.as_os_str().is_empty())
+                        .unwrap_or(Path::new("."))
+                        .to_path_buf()
                 });
                 let destino_path = destino_dir.join(format!("{}.{}", stem, ext));
                 
@@ -301,9 +290,17 @@ impl ConvApp {
                     self.progreso.0  += 1;
                     self.progreso_actual = 0.0;
                 }
-                Msg::ActualizarRuta(idx, nueva_ruta) => {
-                    if let Some(a) = self.archivos.get_mut(idx) {
-                        a.ruta = nueva_ruta;
+                Msg::AnadirArchivosYoutube(videos) => {
+                    for (url, titulo) in videos {
+                        self.archivos.push(Archivo {
+                            ruta: PathBuf::from(titulo),
+                            estado: Estado::Pendiente,
+                            seleccionado: true,
+                            pistas: vec![],
+                            pista_sel: 0,
+                            info: None,
+                            youtube_url: Some(url),
+                        });
                     }
                 }
                 Msg::Finalizado => {
