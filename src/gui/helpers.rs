@@ -1,11 +1,13 @@
-use crate::core::PistaAudio;
+use crate::core::AudioTrack;
 
+/// Shorthand to create a uniform `CornerRadius` for all four corners.
 pub fn cr(v: u8) -> eframe::egui::CornerRadius {
     eframe::egui::CornerRadius { nw: v, ne: v, sw: v, se: v }
 }
 
-pub fn nombre_idioma(codigo: &str) -> String {
-    match codigo.to_lowercase().as_str() {
+/// Converts an ISO 639-1/2 language code into its full display name in Spanish.
+pub fn get_language_name(code: &str) -> String {
+    match code.to_lowercase().as_str() {
         "spa" | "es" | "esp" => "Español",
         "eng" | "en"         => "Inglés",
         "fre" | "fra" | "fr" => "Francés",
@@ -20,16 +22,17 @@ pub fn nombre_idioma(codigo: &str) -> String {
         "cat" | "ca"         => "Catalán",
         "eus" | "eu"         => "Euskera",
         "glg" | "gl"         => "Gallego",
-        "desconocido"        => "Desconocido",
+        "unknown" | "desconocido" => "Desconocido",
         other                => other,
     }.to_string()
 }
 
-pub fn etiqueta_pista(pista: &PistaAudio, num: usize) -> String {
+/// Formats an audio track into a user-friendly label for selection menus.
+pub fn get_track_label(track: &AudioTrack, num: usize) -> String {
     format!(
-        "Pista {} — {} ({})",
+        "Track {} — {} ({})",
         num + 1,
-        nombre_idioma(&pista.idioma),
-        pista.codec.to_uppercase()
+        get_language_name(&track.language),
+        track.codec.to_uppercase()
     )
 }

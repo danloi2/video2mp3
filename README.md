@@ -8,6 +8,7 @@
 
 **video2mp3** is a high-performance desktop suite designed for effortless media downloading and high-speed re-encoding. By bridging the raw efficiency of FFmpeg and yt-dlp with a sleek, native graphical interface, it provides a powerful yet intuitive workspace for both single-file tasks and massive batch conversions—all boosted by full hardware acceleration.
 
+
 ![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
 ![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)
 ![yt-dlp](https://img.shields.io/badge/yt--dlp-FF0000?style=for-the-badge&logo=youtube&logoColor=white)

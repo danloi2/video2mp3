@@ -1,44 +1,43 @@
+//! video2mp3 - A high-performance, professional-grade media converter.
+//!
+//! This application provides both a graphical user interface (GUI) and a 
+//! command-line interface (CLI) for batch processing video files into 
+//! high-quality MP3 or transcoded video formats (H.264/H.265).
+
 mod core;
 mod gui;
 mod cli;
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
+use std::env;
+use eframe::egui;
 
-    // Sin argumentos → interfaz gráfica
-    if args.len() < 2 {
-        let mut viewport = eframe::egui::ViewportBuilder::default()
-            .with_title("video2mp3 — Descarga y Convierte videos")
-            .with_inner_size([1100.0, 800.0])
-            .with_min_inner_size([1100.0, 800.0])
-            .with_drag_and_drop(true);
+fn main() -> eframe::Result {
+    let args: Vec<String> = env::args().collect();
 
-        if let Ok(img) = image::load_from_memory(include_bytes!("../resources/icon.png")) {
-            let img_rgba = img.to_rgba8();
-            let (width, height) = img_rgba.dimensions();
-            let icon_data = eframe::egui::IconData {
-                rgba: img_rgba.into_raw(),
-                width,
-                height,
-            };
-            viewport = viewport.with_icon(std::sync::Arc::new(icon_data));
-        }
-
+    // --- Execution Mode Dispatch ---
+    // If command-line arguments are provided, launch in headless CLI mode.
+    // Otherwise, initialize the eframe GUI environment.
+    if args.len() > 1 {
+        cli::run_cli(&args);
+        Ok(())
+    } else {
+        // GUI Window Configuration
         let options = eframe::NativeOptions {
-            viewport,
-            persist_window: false,
+            viewport: egui::ViewportBuilder::default()
+                .with_inner_size([1100.0, 800.0])
+                .with_min_inner_size([800.0, 600.0])
+                .with_icon(
+                    eframe::icon_data::from_png_bytes(include_bytes!("../resources/icon.png"))
+                        .expect("Failed to load application icon"),
+                ),
             ..Default::default()
         };
 
+        // Launch the eframe application
         eframe::run_native(
-            "video2mp3",
+            "video2mp3 - Pro Media Converter",
             options,
             Box::new(|cc| Ok(Box::new(gui::ConvApp::new(cc)))),
         )
-        .expect("Error al iniciar la interfaz gráfica");
-        return;
     }
-
-    // Modo línea de comandos
-    cli::run_cli_mode(args);
 }

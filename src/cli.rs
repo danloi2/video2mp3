@@ -3,20 +3,27 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::{Arc, atomic::AtomicBool};
 
-use crate::core::{verificar_ffmpeg, convertir_archivo, elegir_pista_defecto, obtener_pistas, TipoConversion, OpcionesVideo, AceleracionHW};
+use crate::core::{verify_ffmpeg, convert_file, select_default_track, get_audio_tracks, ConversionType, VideoOptions, HWAcceleration};
 
-pub fn run_cli_mode(args: Vec<String>) {
-    if !verificar_ffmpeg() {
-        eprintln!("❌ FFmpeg o FFprobe no están instalados o no están en el PATH.");
+/// Entry point for the Command Line Interface (CLI) mode.
+/// 
+/// Handles both single file conversion and batch processing of all supported 
+/// video files in the current directory.
+pub fn run_cli(args: &[String]) {
+    // Check if the system has the required FFmpeg/FFprobe binaries
+    if !verify_ffmpeg() {
+        eprintln!("❌ FFmpeg or FFprobe are not installed or not in the system PATH.");
         exit(1);
     }
-    println!("✅ FFmpeg y FFprobe están instalados.");
+    println!("✅ FFmpeg and FFprobe are ready.");
 
-    let argumento = &args[1];
+    let argument = &args[1];
 
-    if argumento.to_lowercase() == "all" {
-        let mut archivos: Vec<PathBuf> = fs::read_dir(".")
-            .expect("No se puede leer el directorio actual")
+    // --- Case: Batch mode "all" ---
+    if argument.to_lowercase() == "all" {
+        // Collect all compatible video files in the current directory
+        let mut files: Vec<PathBuf> = fs::read_dir(".")
+            .expect("Cannot read the current directory")
             .filter_map(|e| e.ok())
             .map(|e| e.path())
             .filter(|p| {
@@ -29,43 +36,45 @@ pub fn run_cli_mode(args: Vec<String>) {
             })
             .collect();
 
-        archivos.sort();
+        files.sort();
 
-        if archivos.is_empty() {
-            println!("⚠ No se encontraron archivos MKV, MP4 o AVI en el directorio actual.");
+        if files.is_empty() {
+            println!("⚠ No MKV, MP4, or AVI files found in the current directory.");
             return;
         }
 
-        println!("📂 Se encontraron {} archivos de vídeo. Iniciando conversión...\n", archivos.len());
+        println!("📂 Found {} video files. Starting batch conversion...\n", files.len());
 
-        let mut exitosos = 0;
-        let cancelar     = Arc::new(AtomicBool::new(false));
+        let mut successful_count = 0;
+        let cancel               = Arc::new(AtomicBool::new(false));
 
-        for archivo in archivos {
-            let pistas = obtener_pistas(&archivo.to_string_lossy());
-            let stream = pistas
-                .get(elegir_pista_defecto(&pistas))
-                .map(|p| p.indice_stream)
+        for file_path in files {
+            // Find the best audio track for this file
+            let tracks = get_audio_tracks(&file_path.to_string_lossy());
+            let stream = tracks
+                .get(select_default_track(&tracks))
+                .map(|t| t.stream_index)
                 .unwrap_or(0);
 
-            print!("⏳ Convirtiendo '{}'... ", archivo.file_name().unwrap_or_default().to_string_lossy());
+            print!("⏳ Converting '{}'... ", file_path.file_name().unwrap_or_default().to_string_lossy());
             use std::io::Write;
             let _ = std::io::stdout().flush();
 
-            let cancel_clone = cancelar.clone();
-            match convertir_archivo(
-                &archivo,
+            let cancel_clone = cancel.clone();
+            // Perform conversion using default audio settings and no HW acceleration for CLI
+            match convert_file(
+                &file_path,
                 None,
                 stream,
-                false, // CLI por defecto no sobreescribe
-                TipoConversion::AudioMP3,
-                OpcionesVideo { preservar_grano: false, optimizar_color: false, aceleracion: AceleracionHW::Ninguna },
+                false, // CLI defaults to non-overwrite to prevent data loss
+                ConversionType::AudioMP3,
+                VideoOptions { preserve_grain: false, optimize_color: false, acceleration: HWAcceleration::None },
                 cancel_clone,
                 |_ratio| {}, 
             ) {
                 Ok(_) => {
                     println!("[ OK ]");
-                    exitosos += 1;
+                    successful_count += 1;
                 }
                 Err(e) => {
                     println!("\n  └─ Error: {}", e);
@@ -73,34 +82,37 @@ pub fn run_cli_mode(args: Vec<String>) {
             }
         }
 
-        println!("\n🎉 Conversión múltiple completada: {} con éxito.", exitosos);
+        println!("\n🎉 Batch conversion completed: {} successful conversions.", successful_count);
         return;
     }
 
-    let mut origen_path = PathBuf::from(argumento);
+    // --- Case: Single file conversion ---
+    let mut source_path = PathBuf::from(argument);
 
-    if !origen_path.exists() {
-        if !origen_path.extension().is_some() {
-            let posibles_origenes = [
-                origen_path.with_extension("mkv"),
-                origen_path.with_extension("mp4"),
-                origen_path.with_extension("avi"),
+    // If the exact file doesn't exist, try searching for it with different extensions
+    if !source_path.exists() {
+        if source_path.extension().is_none() {
+            let potential_sources = [
+                source_path.with_extension("mkv"),
+                source_path.with_extension("mp4"),
+                source_path.with_extension("avi"),
             ];
 
-            let or = posibles_origenes.iter().find(|p| p.exists());
-            if let Some(p) = or {
-                origen_path = p.clone();
+            let found = potential_sources.iter().find(|p| p.exists());
+            if let Some(p) = found {
+                source_path = p.clone();
             } else {
-                eprintln!("❌ El archivo de origen '{}' no existe y no se encontró una variante .mkv, .mp4 o .avi.", origen_path.display());
+                eprintln!("❌ Source file '{}' not found (tried .mkv, .mp4, and .avi variants).", source_path.display());
                 exit(1);
             }
         } else {
-            eprintln!("❌ El archivo de origen '{}' no existe.", origen_path.display());
+            eprintln!("❌ Source file '{}' does not exist.", source_path.display());
             exit(1);
         }
     }
 
-    let destino_path = if args.len() > 2 {
+    // Determine the destination path (defaults to same name with .mp3 extension)
+    let dest_path = if args.len() > 2 {
         let arg_dest = Path::new(&args[2]);
         if arg_dest.extension().is_none() {
             arg_dest.with_extension("mp3")
@@ -108,28 +120,28 @@ pub fn run_cli_mode(args: Vec<String>) {
             arg_dest.to_path_buf()
         }
     } else {
-        let stem = origen_path.file_stem().unwrap_or_default();
-        origen_path.with_file_name(format!("{}.mp3", stem.to_string_lossy()))
+        let stem = source_path.file_stem().unwrap_or_default();
+        source_path.with_file_name(format!("{}.mp3", stem.to_string_lossy()))
     };
 
-    println!("Iniciando conversión...");
+    println!("Starting conversion...");
 
-    let pistas = obtener_pistas(&origen_path.to_string_lossy());
-    let stream = pistas
-        .get(elegir_pista_defecto(&pistas))
-        .map(|p| p.indice_stream)
+    let tracks = get_audio_tracks(&source_path.to_string_lossy());
+    let stream = tracks
+        .get(select_default_track(&tracks))
+        .map(|t| t.stream_index)
         .unwrap_or(0);
 
-    let cancelar = Arc::new(AtomicBool::new(false));
+    let cancel = Arc::new(AtomicBool::new(false));
 
-    match convertir_archivo(
-        &origen_path,
-        Some(&destino_path),
+    match convert_file(
+        &source_path,
+        Some(&dest_path),
         stream,
         false, 
-        TipoConversion::AudioMP3,
-        OpcionesVideo { preservar_grano: false, optimizar_color: false, aceleracion: AceleracionHW::Ninguna },
-        cancelar,
+        ConversionType::AudioMP3,
+        VideoOptions { preserve_grain: false, optimize_color: false, acceleration: HWAcceleration::None },
+        cancel,
         |_ratio| {}, 
     ) {
         Ok(msg) => println!("{}", msg),

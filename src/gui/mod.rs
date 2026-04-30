@@ -8,35 +8,40 @@ use std::sync::{Arc, atomic::AtomicBool};
 use std::sync::mpsc::Receiver;
 use eframe::egui;
 
-use crate::core::{verificar_ffmpeg, TipoConversion, OpcionesVideo, obtener_version_ffmpeg, obtener_version_ytdlp, CapacidadesHardware, detectar_capacidades_hardware, AceleracionHW};
-use state::{Archivo, Msg};
+use crate::core::{verify_ffmpeg, ConversionType, VideoOptions, get_ffmpeg_version, get_ytdlp_version, HWCapabilities, detect_hw_capabilities, HWAcceleration};
+use state::{FileItem, Msg};
 
+/// The main application state for the video2mp3 GUI.
 pub struct ConvApp {
     pub(crate) ffmpeg_ok:       bool,
     pub(crate) ytdlp_ok:        bool,
     pub(crate) ffmpeg_version:  String,
     pub(crate) ytdlp_version:   String,
-    pub(crate) capacidades:     CapacidadesHardware,
-    pub(crate) archivos:        Vec<Archivo>,
+    pub(crate) capabilities:    HWCapabilities,
+    pub(crate) files:           Vec<FileItem>,
     pub(crate) log:             Vec<(bool, String)>,
-    pub(crate) convirtiendo:    bool,
-    pub(crate) progreso:        (usize, usize),
-    pub(crate) progreso_actual: f32,
-    pub(crate) cancelar:        Arc<AtomicBool>,
+    pub(crate) is_converting:   bool,
+    pub(crate) progress:        (usize, usize),
+    pub(crate) current_progress: f32,
+    pub(crate) cancel:          Arc<AtomicBool>,
     pub(crate) rx:              Option<Receiver<Msg>>,
     pub(crate) logo_texture:    Option<egui::TextureHandle>,
-    // Nuevas opciones
-    pub(crate) tipo_conversion: TipoConversion,
-    pub(crate) opciones_video:  OpcionesVideo,
-    pub(crate) primera_vez:     bool,
+    
+    // --- User Configuration ---
+    pub(crate) conversion_type: ConversionType,
+    pub(crate) video_options:   VideoOptions,
+    pub(crate) first_time:      bool,
     pub(crate) youtube_url:     String,
-    pub(crate) directorio_salida: Option<std::path::PathBuf>,
+    pub(crate) output_directory: Option<std::path::PathBuf>,
 }
 
 impl ConvApp {
+    /// Initializes a new application state and sets up the theme and assets.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        theme::aplicar_tema(&cc.egui_ctx);
+        // Apply the custom visual theme to the egui context
+        theme::apply_theme(&cc.egui_ctx);
         
+        // Load the logo icon as a texture
         let logo_texture = match image::load_from_memory(include_bytes!("../../resources/icon.png")) {
             Ok(img) => {
                 let img = img.to_rgba8();
@@ -48,37 +53,44 @@ impl ConvApp {
             Err(_) => None,
         };
 
-        use crate::core::verificar_ytdlp;
+        use crate::core::verify_ytdlp;
 
         Self {
-            ffmpeg_ok:       verificar_ffmpeg(),
-            ytdlp_ok:        verificar_ytdlp(),
-            ffmpeg_version:  obtener_version_ffmpeg(),
-            ytdlp_version:   obtener_version_ytdlp(),
-            capacidades:     detectar_capacidades_hardware(),
-            archivos:        vec![],
+            ffmpeg_ok:       verify_ffmpeg(),
+            ytdlp_ok:        verify_ytdlp(),
+            ffmpeg_version:  get_ffmpeg_version(),
+            ytdlp_version:   get_ytdlp_version(),
+            capabilities:    detect_hw_capabilities(),
+            files:           vec![],
             log:             vec![],
-            convirtiendo:    false,
-            progreso:        (0, 0),
-            progreso_actual: 0.0,
-            cancelar:        Arc::new(AtomicBool::new(false)),
+            is_converting:   false,
+            progress:        (0, 0),
+            current_progress: 0.0,
+            cancel:          Arc::new(AtomicBool::new(false)),
             rx:              None,
             logo_texture,
-            tipo_conversion: TipoConversion::AudioMP3,
-            opciones_video:  OpcionesVideo { preservar_grano: false, optimizar_color: true, aceleracion: AceleracionHW::Ninguna },
-            primera_vez:     true,
+            conversion_type: ConversionType::AudioMP3,
+            video_options:   VideoOptions { preserve_grain: false, optimize_color: true, acceleration: HWAcceleration::None },
+            first_time:      true,
             youtube_url:     "".to_string(),
-            directorio_salida: None,
+            output_directory: None,
         }
     }
 }
 
 impl eframe::App for ConvApp {
+    /// Main UI entry point for the eframe application.
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        if self.primera_vez {
+        // One-time window configuration on startup
+        if self.first_time {
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Maximized(true));
-            self.primera_vez = false;
+            self.first_time = false;
         }
-        layout::render_ui(self, ui);
+
+        // Divide the UI into panels
+        let ctx = ui.ctx().clone();
+        egui::CentralPanel::default().show_inside(ui, |ui| {
+            layout::render_ui(self, ui, &ctx);
+        });
     }
 }

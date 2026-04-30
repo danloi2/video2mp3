@@ -1,21 +1,26 @@
 use eframe::egui::{self, Color32, CornerRadius, Stroke};
 
+/// Internal shorthand for uniform `CornerRadius`.
 pub fn cr(v: u8) -> CornerRadius {
     CornerRadius { nw: v, ne: v, sw: v, se: v }
 }
 
-pub fn aplicar_tema(ctx: &egui::Context) {
+/// Applies a custom visual theme to the application.
+pub fn apply_theme(ctx: &egui::Context) {
     let mut visuals = egui::Visuals::light();
+    
+    // --- Palette Definition ---
     let bg_base   = Color32::from_rgb(248, 249, 252);
     let bg_panel  = Color32::from_rgb(238, 240, 245);
     let bg_widget = Color32::from_rgb(228, 232, 240);
-    
     let accent_primary = Color32::from_rgb(105, 75, 215);
 
+    // --- Surface Colors ---
     visuals.window_fill = bg_base;
     visuals.panel_fill = bg_panel;
     visuals.faint_bg_color = bg_panel;
     
+    // --- Widget Interaction States ---
     visuals.widgets.noninteractive.bg_fill = bg_widget;
     visuals.widgets.noninteractive.bg_stroke = Stroke::new(1.0, Color32::from_rgb(215, 220, 225));
     visuals.widgets.noninteractive.corner_radius = cr(6);
@@ -39,9 +44,9 @@ pub fn aplicar_tema(ctx: &egui::Context) {
 
     let mut style = (*ctx.global_style()).clone();
     
-    // Aumentar tamaños de fuente por defecto
+    // Increase default font sizes globally to improve readability
     for font_id in style.text_styles.values_mut() {
-        font_id.size += 4.0; // Incremento total de +4 desde el original
+        font_id.size += 4.0;
     }
     
     ctx.set_global_style(style);
