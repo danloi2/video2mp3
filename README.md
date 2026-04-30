@@ -4,48 +4,63 @@
   <img src="resources/icon.png" width="180" alt="video2mp3 Logo">
 </p>
 
-> **A blazingly fast, native video & audio re-encoder with hardware acceleration.**
+> **A blazingly fast, professional media suite for high-performance transcoding and YouTube downloading.**
 
-**video2mp3** is a high-performance desktop suite designed for effortless media downloading and high-speed re-encoding. By bridging the raw efficiency of FFmpeg and yt-dlp with a sleek, native graphical interface, it provides a powerful yet intuitive workspace for both single-file tasks and massive batch conversions—all boosted by full hardware acceleration.
-
+**video2mp3** is an industry-grade media processing suite designed for effortless downloading and high-speed re-encoding. By bridging the raw efficiency of **FFmpeg** and **yt-dlp** with a sleek, native **egui** interface, it provides a powerful yet intuitive workspace for both single-file tasks and massive batch conversions—all boosted by full hardware acceleration.
 
 ![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
 ![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)
 ![yt-dlp](https://img.shields.io/badge/yt--dlp-FF0000?style=for-the-badge&logo=youtube&logoColor=white)
 ![egui](https://img.shields.io/badge/egui-FF5722?style=for-the-badge&logo=rust&logoColor=white)
-![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
-![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white)
-![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
+![Hardware Accel](https://img.shields.io/badge/HW--Acceleration-Active-blue?style=for-the-badge)
 
 ---
 
 ## 🏛️ Project Philosophy
 
-The project is built on the pillars of **native performance**, **user-centric design**, and **simplicity**. Inspired by the efficiency of systems programming and clear UI principles, **video2mp3** offers a seamless bridge for users to process media without fighting complex command-line interfaces, while retaining full execution speed.
+The project is built on the pillars of **native performance**, **professional architecture**, and **simplicity**. Recently refactored into a highly modular system, **video2mp3** serves as a template for how to build robust, thread-safe media applications in Rust using modern design patterns.
 
 ---
 
 ## ✨ Key Features
 
-### 🌍 YouTube & Playlists (NEW!)
-- **Smart Staged Workflow**: Paste a YouTube link to instantly analyze and add it to your list. The title is fetched in the background while you prepare the rest of your queue.
-- **Full Playlist Support**: Detects and processes entire playlists automatically, with item-by-item progress tracking.
-- **Versatile Conversion**: Choose your output format (MP3, H.264, or H.265) and hit "Convert" to process all local and YouTube tasks in a single batch.
+### 🌍 YouTube & Playlists
+- **Smart Staged Workflow**: Analyze YouTube URLs in the background while managing your queue.
+- **Full Playlist Support**: Automatically detect and expand entire playlists for batch processing.
+- **Progress Tracking**: Real-time feedback for both download and post-processing phases.
 
-### 🚀 Hardware Acceleration
-- **Automatic Detection**: Probes your PC to find NVIDIA (NVENC), Intel (QSV), AMD (AMF/VAAPI), or Apple (VideoToolbox) chips.
-- **Smart UI Tags**: Visual badges show you exactly what hardware is active and usable in your system.
-- **Turbo Encoding**: Up to 10x faster processing in supported GPUs compared to CPU-only encoding.
+### 🚀 Hardware Acceleration (Pro Grade)
+- **Real-time Probing**: Dynamically detects available GPU encoders (NVENC, QSV, AMF, VAAPI, VideoToolbox).
+- **Dynamic Optimization**: Automatically configures encoder flags for the best balance between speed and quality.
+- **Visual Status**: Integrated UI tags show exactly which hardware features are currently usable on your system.
 
-### 🎥 High-Performance Processing
-- **Deep Media Probing**: Automatically displays the container format, video codec, and main audio codec for local files using visual tags.
-- **Batch Conversion**: Drag and drop multiple MKV, MP4, or AVI files and process them sequentially in the background.
-- **Custom Output Directory**: Choose exactly where your files go. If not set, it defaults to the source folder (for files) or your Downloads folder (for YouTube).
+### 🎥 Professional Media Workspace
+- **Deep Media Probing**: Detailed inspection of containers and codecs (MKV, MP4, AVI, etc.) using `ffprobe`.
+- **Intelligent Track Selection**: Scans all audio streams; automatically pre-selects primary language tracks (SPA/ES).
+- **Custom Design System**: A premium, high-contrast visual theme with sub-pixel text rendering and smooth transitions.
 
-### 🎛️ Smart Audio Management
-- **Automatic Track Detection**: Uses `ffprobe` to scan all available audio streams inside media containers.
-- **Language Priority**: Automatically detects and pre-selects the Spanish track (SPA/ES) by default.
-- **Manual Override**: Intuitive dropdown menus allow users to select any specific audio track.
+---
+
+## 🏗️ Architectural Overview (v1.0.6+)
+
+The project has been recently refactored into a professional modular structure:
+
+```mermaid
+graph TD
+    A[main.rs] --> B[CLI Mode]
+    A --> C[GUI Mode]
+    C --> D[Logic Layer]
+    C --> E[Layout Layer]
+    D --> F[Core Engine]
+    E --> G[Widgets & Panels]
+    F --> H[FFmpeg/yt-dlp Wrappers]
+    F --> I[Hardware Probing]
+```
+
+- **`src/core/`**: Pure business logic, hardware detection, and media wrappers.
+- **`src/gui/logic/`**: Thread-safe message handling and application flow control.
+- **`src/gui/layout/`**: Declarative UI components and custom design system.
+- **`src/cli/`**: Headless batch processing engine.
 
 ---
 
@@ -53,11 +68,11 @@ The project is built on the pillars of **native performance**, **user-centric de
 
 | Domain                | Technology                                                                                 |
 | :-------------------- | :----------------------------------------------------------------------------------------- |
-| **Core Language**     | [Rust](https://www.rust-lang.org/)                                                         |
-| **GUI Framework**     | [eframe](https://docs.rs/eframe/latest/eframe/) + [egui](https://github.com/emilk/egui)    |
-| **Media Engines**     | [FFmpeg](https://ffmpeg.org/) + [ffprobe](https://ffmpeg.org/ffprobe.html) + [yt-dlp](https://github.com/yt-dlp/yt-dlp) |
-| **Hardware APIs**     | NVENC, QSV, VAAPI, AMF, Apple VideoToolbox                                                 |
-| **Automation**        | GitHub Actions (Multi-platform Builds)                                                     |
+| **Language**          | **Rust** (Safety-first systems programming)                                                |
+| **GUI**               | [eframe](https://docs.rs/eframe/latest/eframe/) + [egui](https://github.com/emilk/egui)    |
+| **Engines**           | [FFmpeg](https://ffmpeg.org/) + [yt-dlp](https://github.com/yt-dlp/yt-dlp)                 |
+| **SerDe**             | [serde](https://serde.rs/) for efficient metadata parsing                                  |
+| **Threading**         | Standard library MPSC channels for UI synchronization                              |
 
 ---
 
@@ -65,41 +80,33 @@ The project is built on the pillars of **native performance**, **user-centric de
 
 ### Prerequisites
 
-- **FFmpeg (v4.0+)** available in your system's `$PATH`.
-- **yt-dlp** (Optional but recommended) for YouTube download features.
-- For Hardware Acceleration: Updated GPU drivers (NVIDIA/Intel/AMD/Apple).
-
-**Quick Download:**
-You can find the latest pre-compiled binaries for your system in the [**Releases**](https://github.com/danloi2/convmp3/releases) section. Look for the "Latest Build" tag.
+- **FFmpeg (v5.0+)** available in your system's `$PATH`.
+- **yt-dlp** for YouTube integration features.
+- **GPU Drivers**: Ensure the latest drivers are installed for hardware acceleration.
 
 ### Build from source
 
-1. **Clone the repository** and navigate to the root directory:
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/danloi2/convmp3.git
    cd convmp3
    ```
 
-2. **Build and Run**:
+2. **Run in release mode**:
    ```bash
    cargo run --release
    ```
 
 ---
 
-## ⚖️ Legal & Copyright Notice
+## 🤝 Contributing
 
-### ⚠️ License
+This project is maintained as a high-quality open-source media suite. Contributions regarding new hardware acceleration profiles or UI refinements are welcome.
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for more information.
-
-- **Source Code**: Open-source, free to use, modify, and distribute.
-- **Dependencies**: Relies on system-installed FFmpeg and yt-dlp binaries (not bundled), which may have their own licensing guidelines (e.g., GPL/LGPL).
+**Author**: Daniel Losada - [![GitHub](https://img.shields.io/badge/danloi2-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/danloi2)
 
 ---
 
-## 🤝 Contributing & Support
+## ⚖️ License
 
-This project is developed for the benefit of the community to streamline media conversion tasks. Contributions that align with the project's performance and design goals are welcome.
-
-**Author**: Daniel Losada - [![GitHub](https://img.shields.io/badge/Daniel_Losada-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/danloi2)
+Licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
