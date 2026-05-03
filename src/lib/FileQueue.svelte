@@ -5,7 +5,7 @@
   } from '../stores.js';
   import {
     addFiles, addFolder, removeFile, clearQueue,
-    selectAll, selectNone, startConversion, cancelConversion
+    selectAll, selectNone, startConversion, downloadYoutube, cancelConversion
   } from '../app.js';
   import { open } from '@tauri-apps/plugin-dialog';
   import { get } from 'svelte/store';

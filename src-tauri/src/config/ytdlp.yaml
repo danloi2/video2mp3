@@ -98,30 +98,30 @@ ytdlp:
       - "{url}"
 
   download_video_h264:
-    # Force H264 video codec
+    # Force H264 video codec and MP4 container
     args:
       - "--newline"
       - "--no-quiet"
       - "--print"
       - "after_move:filepath"
-      - "-S"
-      - "vcodec:h264,res,acodec:m4a"
-      - "--recode-video"
+      - "-f"
+      - "bestvideo[vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/best"
+      - "--merge-output-format"
       - "mp4"
       - "-o"
       - "{output_template}"
       - "{url}"
 
   download_video_h265:
-    # Force H265 (HEVC) video codec
+    # Prefer H265/HEVC if available, otherwise best quality in MKV
     args:
       - "--newline"
       - "--no-quiet"
       - "--print"
       - "after_move:filepath"
-      - "-S"
-      - "vcodec:h265,res,acodec:m4a"
-      - "--recode-video"
+      - "-f"
+      - "bestvideo[vcodec^=hev1]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+      - "--merge-output-format"
       - "mkv"
       - "-o"
       - "{output_template}"
