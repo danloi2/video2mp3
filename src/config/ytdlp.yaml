@@ -71,6 +71,24 @@ ytdlp:
       - "-x"
       - "--audio-format"
       - "mp3"
+      - "--audio-quality"
+      - "2"
       - "-o"
-      - "{output_template}"   # e.g. /path/to/downloads/%(title)s.%(ext)s
+      - "{output_template}"
+      - "{url}"
+
+  download_audio_aac:
+    # Audio-only download, converted to AAC on the fly
+    args:
+      - "--newline"
+      - "--no-quiet"
+      - "--print"
+      - "after_move:filepath"
+      - "-x"
+      - "--audio-format"
+      - "m4a"
+      - "--audio-quality"
+      - "2"
+      - "-o"
+      - "{output_template}"
       - "{url}"

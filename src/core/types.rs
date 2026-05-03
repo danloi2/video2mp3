@@ -9,6 +9,8 @@
 pub enum ConversionType {
     /// Extract and encode audio as high-quality MP3.
     AudioMP3,
+    /// Extract and encode audio as high-quality AAC.
+    AudioAAC,
     /// Remux or convert video to MKV container.
     VideoMKV,
     /// Transcode video to H.264 (AVC) format.

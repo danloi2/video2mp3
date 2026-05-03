@@ -37,6 +37,7 @@ where
     // Determine target extension based on conversion type
     let ext = match conv_type {
         ConversionType::AudioMP3 => "mp3",
+        ConversionType::AudioAAC => "m4a",
         _ => "mkv",
     };
 
@@ -63,6 +64,7 @@ where
     // --- Profile Selection ---
     let profile_name = match conv_type {
         ConversionType::AudioMP3 => "extract_audio_mp3",
+        ConversionType::AudioAAC => "extract_audio_aac",
         ConversionType::VideoMKV => "remux_mkv",
         ConversionType::VideoH264 => match options.acceleration {
             HWAcceleration::None => "encode_h264_software",

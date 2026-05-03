@@ -97,7 +97,7 @@ where
 pub fn download_youtube<F>(
     url: &str,
     destination: &Path,
-    audio_only: bool,
+    conv_type: crate::core::ConversionType,
     cancel: Arc<AtomicBool>,
     on_progress: F,
 ) -> Result<PathBuf, String>
@@ -105,7 +105,13 @@ where
     F: Fn(crate::core::ProgressUpdate),
 {
     let config = load_ytdlp_config()?;
-    let profile_name = if audio_only { "download_audio_mp3" } else { "download_video" };
+    
+    let profile_name = match conv_type {
+        crate::core::ConversionType::AudioMP3 => "download_audio_mp3",
+        crate::core::ConversionType::AudioAAC => "download_audio_aac",
+        _ => "download_video",
+    };
+
     let profile = config.profiles.get(profile_name)
         .ok_or_else(|| format!("Profile '{}' not found", profile_name))?;
     let mut args = profile.args.as_ref()

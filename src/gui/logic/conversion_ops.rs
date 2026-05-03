@@ -27,6 +27,7 @@ impl ConvApp {
                 
                 let ext = match self.conversion_type {
                     ConversionType::AudioMP3 => "mp3",
+                    ConversionType::AudioAAC => "m4a",
                     _ => "mkv",
                 };
 
@@ -99,21 +100,21 @@ impl ConvApp {
                 
                 let (ok, msg) = if let Some(url) = youtube_url {
                     // --- YouTube Pipeline ---
-                    let audio_only = conv_type == ConversionType::AudioMP3;
+                    let is_audio = conv_type == ConversionType::AudioMP3 || conv_type == ConversionType::AudioAAC;
                     let dest_dir = dest_path.parent().unwrap_or(Path::new("."));
 
-                    let download_res = download_youtube(&url, dest_dir, audio_only, cancel_clone.clone(), |update| {
+                    let download_res = download_youtube(&url, dest_dir, conv_type, cancel_clone.clone(), |update| {
                         match update {
                             crate::core::ProgressUpdate::Ratio(ratio) => {
                                 // If transcoding follows download, each takes 50% of the bar
-                                let r = if audio_only { ratio } else { ratio * 0.5 };
+                                let r = if is_audio { ratio } else { ratio * 0.5 };
                                 let _ = tx_loop.send(Msg::Progress(idx, r));
                             }
                             crate::core::ProgressUpdate::Playlist(cur, tot) => {
                                 let _ = tx_loop.send(Msg::PlaylistProgress(idx, cur, tot));
                             }
                             crate::core::ProgressUpdate::Phase(phase) => {
-                                if phase == "converting" && !audio_only {
+                                if phase == "converting" && !is_audio {
                                     // Managed below manually for H264/H265
                                 } else {
                                     let _ = tx_loop.send(Msg::YouTubePhase(idx, phase));
@@ -125,7 +126,7 @@ impl ConvApp {
 
                     match download_res {
                         Ok(downloaded_path) => {
-                            if audio_only {
+                            if is_audio {
                                 (true, format!("✅ YouTube → {}", downloaded_path.file_name().unwrap_or_default().to_string_lossy()))
                             } else {
                                 // For video formats, we follow the download with a custom transcode pass
