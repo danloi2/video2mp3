@@ -17,8 +17,8 @@ export default defineConfig({
   },
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
   build: {
-    // Tauri uses Chromium for Windows/Linux, WebKit for macOS
-    target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
+    // Use a modern target for Vite 8 and Svelte 5 support
+    target: 'es2022',
     minify: !process.env.TAURI_ENV_DEBUG ? 'esbuild' : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
     outDir: 'dist',
