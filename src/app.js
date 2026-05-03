@@ -266,8 +266,8 @@ export async function downloadYoutube(settings, items) {
 
   try {
     const destination = settings.outputDir || "";
-    const convType    = settings.convType;
-    await invoke('download_youtube_cmd', { urls, destination, convType });
+    const conv_type   = settings.convType;
+    await invoke('download_youtube_cmd', { urls, destination, conv_type });
   } catch (e) {
     appendLog(false, `YouTube error: ${e}`);
     isConverting.set(false);
