@@ -8,6 +8,7 @@ pub mod types;
 pub mod probe;
 pub mod convert_file;
 pub mod convert_youtube;
+pub mod config;
 
 // Re-export core types for easier access from other modules
 pub use types::{AudioTrack, ConversionType, VideoOptions, HWAcceleration, ProgressUpdate, MediaInfo};
@@ -24,7 +25,8 @@ pub use probe::{
     detect_hw_capabilities, 
     get_media_info
 };
-
-// Re-export conversion and download operations
+ 
+ 
+ // Re-export conversion and download operations
 pub use convert_file::convert_file;
 pub use convert_youtube::{download_youtube, get_playlist_videos};

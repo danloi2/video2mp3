@@ -1,0 +1,252 @@
+ffmpeg:
+  program: "ffmpeg"
+
+  # --- Audio ---
+
+  extract_audio_mp3:
+    args:
+      - "-y"
+      - "-i"
+      - "{input}"
+      - "-map"
+      - "0:{audio_stream}"
+      - "-c:a"
+      - "libmp3lame"
+      - "-q:a"
+      - "2"
+      - "-progress"
+      - "pipe:1"
+      - "-nostats"
+      - "{output}"
+
+  extract_audio_aac:
+    args:
+      - "-y"
+      - "-i"
+      - "{input}"
+      - "-map"
+      - "0:{audio_stream}"
+      - "-c:a"
+      - "aac"
+      - "-b:a"
+      - "192k"
+      - "-progress"
+      - "pipe:1"
+      - "-nostats"
+      - "{output}"
+
+  remux_mkv:
+    args:
+    - "-y"
+    - "-fflags"
+    - "+genpts"
+    - "-i"
+    - "{input}"
+    - "-map"
+    - "0"
+    - "-c"
+    - "copy"
+    - "-progress"
+    - "pipe:1"
+    - "-nostats"
+    - "{output}"
+
+  # --- Video H.264 (software) ---
+
+  encode_h264_software:
+    args:
+      - "-y"
+      - "-i"
+      - "{input}"
+      - "-map"
+      - "0:v:0"
+      - "-map"
+      - "0:{audio_stream}"
+      - "-c:v"
+      - "libx264"
+      - "-crf"
+      - "18"
+      - "-tune"
+      - "{tune}"          # film | grain
+      - "-preset"
+      - "slow"
+      - "-profile:v"
+      - "high"
+      - "-level"
+      - "4.1"
+      - "-x264-params"
+      - "ref=4:bframes=3:aq-mode=2"
+      - "-c:a"
+      - "ac3"
+      - "-b:a"
+      - "448k"
+      - "-progress"
+      - "pipe:1"
+      - "-nostats"
+      - "{output}"
+
+  # --- Video H.264 (NVENC) ---
+
+  encode_h264_nvenc:
+    args:
+      - "-y"
+      - "-hwaccel"
+      - "auto"
+      - "-i"
+      - "{input}"
+      - "-map"
+      - "0:v:0"
+      - "-map"
+      - "0:{audio_stream}"
+      - "-c:v"
+      - "h264_nvenc"
+      - "-preset"
+      - "slow"
+      - "-rc"
+      - "vbr"
+      - "-cq"
+      - "19"
+      - "-profile:v"
+      - "high"
+      - "-c:a"
+      - "ac3"
+      - "-b:a"
+      - "448k"
+      - "-progress"
+      - "pipe:1"
+      - "-nostats"
+      - "{output}"
+
+  # --- Video H.264 (generic HW: QSV / AMF / VAAPI / VideoToolbox) ---
+
+  encode_h264_hw:
+    args:
+      - "-y"
+      - "-hwaccel"
+      - "auto"
+      - "-i"
+      - "{input}"
+      - "-map"
+      - "0:v:0"
+      - "-map"
+      - "0:{audio_stream}"
+      - "-c:v"
+      - "{hw_codec}"     # h264_qsv | h264_amf | h264_vaapi | h264_videotoolbox
+      - "-q:v"
+      - "19"
+      - "-c:a"
+      - "ac3"
+      - "-b:a"
+      - "448k"
+      - "-progress"
+      - "pipe:1"
+      - "-nostats"
+      - "{output}"
+
+  # --- Video H.265 (software) ---
+
+  encode_h265_software:
+    args:
+      - "-y"
+      - "-i"
+      - "{input}"
+      - "-map"
+      - "0:v:0"
+      - "-map"
+      - "0:{audio_stream}"
+      - "-c:v"
+      - "libx265"
+      - "-crf"
+      - "20"
+      - "-preset"
+      - "slow"
+      - "-x265-params"
+      - "aq-mode=3:aq-strength=1.0:deblock=-1,-1"
+      - "-c:a"
+      - "aac"
+      - "-b:a"
+      - "192k"
+      - "-progress"
+      - "pipe:1"
+      - "-nostats"
+      - "{output}"
+
+  # --- Video H.265 (NVENC) ---
+
+  encode_h265_nvenc:
+    args:
+      - "-y"
+      - "-hwaccel"
+      - "auto"
+      - "-i"
+      - "{input}"
+      - "-map"
+      - "0:v:0"
+      - "-map"
+      - "0:{audio_stream}"
+      - "-c:v"
+      - "hevc_nvenc"
+      - "-preset"
+      - "slow"
+      - "-rc"
+      - "vbr"
+      - "-cq"
+      - "21"
+      - "-c:a"
+      - "aac"
+      - "-b:a"
+      - "192k"
+      - "-progress"
+      - "pipe:1"
+      - "-nostats"
+      - "{output}"
+
+  # --- Video H.265 (generic HW: QSV / AMF / VAAPI / VideoToolbox) ---
+
+  encode_h265_hw:
+    args:
+      - "-y"
+      - "-hwaccel"
+      - "auto"
+      - "-i"
+      - "{input}"
+      - "-map"
+      - "0:v:0"
+      - "-map"
+      - "0:{audio_stream}"
+      - "-c:v"
+      - "{hw_codec}"     # hevc_qsv | hevc_amf | hevc_vaapi | hevc_videotoolbox
+      - "-q:v"
+      - "21"
+      - "-c:a"
+      - "aac"
+      - "-b:a"
+      - "192k"
+      - "-progress"
+      - "pipe:1"
+      - "-nostats"
+      - "{output}"
+
+  # --- Optional color correction (appended to any video profile) ---
+
+  color_correction:
+    extra_args:
+      - "-color_primaries"
+      - "bt709"
+      - "-color_trc"
+      - "bt709"
+      - "-colorspace"
+      - "bt709"
+
+  # --- Probe (duration) ---
+
+  probe_duration:
+    program: "ffprobe"
+    args:
+      - "-v"
+      - "error"
+      - "-show_entries"
+      - "format=duration"
+      - "-of"
+      - "default=noprint_wrappers=1:nokey=1"
+      - "{input}"

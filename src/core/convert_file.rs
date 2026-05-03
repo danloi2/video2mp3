@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 use super::probe::get_duration_seconds;
-use super::types::{VideoOptions, ConversionType};
+use super::types::{VideoOptions, ConversionType, HWAcceleration};
+use super::config::load_ffmpeg_config;
 
 /// Core function to perform file-to-file conversion using FFmpeg.
 pub fn convert_file<F>(
@@ -19,6 +20,9 @@ pub fn convert_file<F>(
 where
     F: Fn(crate::core::ProgressUpdate),
 {
+    // Load config
+    let config = load_ffmpeg_config()?;
+
     // Extract file base name for destination formatting
     let stem = source
         .file_stem()
@@ -51,149 +55,66 @@ where
     // Get source duration for progress percentage calculation
     let duration_s = get_duration_seconds(&source.to_string_lossy()).unwrap_or(0.0);
 
-    // --- FFmpeg Command Initialization ---
-    let mut args = vec!["-y".to_string()]; 
+    // --- Profile Selection ---
+    let profile_name = match conv_type {
+        ConversionType::AudioMP3 => "extract_audio_mp3",
+        ConversionType::VideoMKV => "remux_mkv",
+        ConversionType::VideoH264 => match options.acceleration {
+            HWAcceleration::None => "encode_h264_software",
+            HWAcceleration::NVENC => "encode_h264_nvenc",
+            _ => "encode_h264_hw",
+        },
+        ConversionType::VideoH265 => match options.acceleration {
+            HWAcceleration::None => "encode_h265_software",
+            HWAcceleration::NVENC => "encode_h265_nvenc",
+            _ => "encode_h265_hw",
+        },
+    };
 
-    use crate::core::types::HWAcceleration;
-    // Enable auto-hardware acceleration if requested
-    if options.acceleration != HWAcceleration::None {
-        args.extend(["-hwaccel".to_string(), "auto".to_string()]);
+    let profile = config.profiles.get(profile_name)
+        .ok_or_else(|| format!("Profile '{}' not found in config", profile_name))?;
+    
+    let mut args: Vec<String> = profile.args.as_ref()
+        .ok_or_else(|| format!("Profile '{}' has no arguments", profile_name))?
+        .clone();
+
+    // --- Placeholder Replacement ---
+    let hw_codec = match (conv_type, options.acceleration) {
+        (ConversionType::VideoH264, HWAcceleration::QSV)   => "h264_qsv",
+        (ConversionType::VideoH264, HWAcceleration::AMF)   => "h264_amf",
+        (ConversionType::VideoH264, HWAcceleration::VAAPI) => "h264_vaapi",
+        (ConversionType::VideoH264, HWAcceleration::VideoToolbox) => "h264_videotoolbox",
+        (ConversionType::VideoH265, HWAcceleration::QSV)   => "hevc_qsv",
+        (ConversionType::VideoH265, HWAcceleration::AMF)   => "hevc_amf",
+        (ConversionType::VideoH265, HWAcceleration::VAAPI) => "hevc_vaapi",
+        (ConversionType::VideoH265, HWAcceleration::VideoToolbox) => "hevc_videotoolbox",
+        _ => "",
+    };
+
+    let tune = if options.preserve_grain { "grain" } else { "film" };
+
+    for arg in args.iter_mut() {
+        *arg = arg.replace("{input}", &source.to_string_lossy())
+                  .replace("{output}", &destination_path.to_string_lossy())
+                  .replace("{audio_stream}", &audio_stream.to_string())
+                  .replace("{hw_codec}", hw_codec)
+                  .replace("{tune}", tune);
     }
 
-    args.extend([
-        "-i".to_string(),
-        source.to_string_lossy().to_string(),
-    ]);
-
-    // --- Encoder Configuration ---
-    match conv_type {
-        ConversionType::AudioMP3 => {
-            args.extend([
-                "-map".to_string(),
-                format!("0:{}", audio_stream),
-                "-c:a".to_string(),
-                "libmp3lame".to_string(),
-                "-q:a".to_string(),
-                "2".to_string(),
-            ]);
-        }
-        ConversionType::VideoH264 => {
-            let codec = match options.acceleration {
-                HWAcceleration::NVENC => "h264_nvenc",
-                HWAcceleration::QSV   => "h264_qsv",
-                HWAcceleration::AMF   => "h264_amf",
-                HWAcceleration::VAAPI => "h264_vaapi",
-                HWAcceleration::VideoToolbox => "h264_videotoolbox",
-                HWAcceleration::None => "libx264",
-            };
-            
-            args.extend([
-                "-map".to_string(), "0:v:0".to_string(),
-                "-map".to_string(), format!("0:{}", audio_stream),
-                "-c:v".to_string(), codec.to_string(),
-            ]);
-
-            match options.acceleration {
-                HWAcceleration::None => {
-                    args.extend(["-crf".to_string(), "18".to_string()]);
-                    if options.preserve_grain {
-                        args.extend(["-tune".to_string(), "grain".to_string()]);
-                    } else {
-                        args.extend(["-tune".to_string(), "film".to_string()]);
-                    }
-                    args.extend([
-                        "-preset".to_string(), "slow".to_string(),
-                        "-profile:v".to_string(), "high".to_string(),
-                        "-level".to_string(), "4.1".to_string(),
-                        "-x264-params".to_string(), "ref=4:bframes=3:aq-mode=2".to_string(),
-                    ]);
-                }
-                HWAcceleration::NVENC => {
-                    args.extend([
-                        "-preset".to_string(), "slow".to_string(),
-                        "-rc".to_string(), "vbr".to_string(),
-                        "-cq".to_string(), "19".to_string(),
-                        "-profile:v".to_string(), "high".to_string(),
-                    ]);
-                }
-                HWAcceleration::VideoToolbox => {
-                    args.extend(["-q:v".to_string(), "60".to_string()]);
-                }
-                _ => {
-                    args.extend(["-q:v".to_string(), "19".to_string()]);
-                }
-            }
-
-            args.extend([
-                "-c:a".to_string(), "ac3".to_string(),
-                "-b:a".to_string(), "448k".to_string(),
-            ]);
-        }
-        ConversionType::VideoH265 => {
-            let codec = match options.acceleration {
-                HWAcceleration::NVENC => "hevc_nvenc",
-                HWAcceleration::QSV   => "hevc_qsv",
-                HWAcceleration::AMF   => "hevc_amf",
-                HWAcceleration::VAAPI => "hevc_vaapi",
-                HWAcceleration::VideoToolbox => "hevc_videotoolbox",
-                HWAcceleration::None => "libx265",
-            };
-
-            args.extend([
-                "-map".to_string(), "0:v:0".to_string(),
-                "-map".to_string(), format!("0:{}", audio_stream),
-                "-c:v".to_string(), codec.to_string(),
-            ]);
-
-            match options.acceleration {
-                HWAcceleration::None => {
-                    args.extend(["-crf".to_string(), "20".to_string()]);
-                    if options.preserve_grain {
-                        args.extend(["-tune".to_string(), "grain".to_string()]);
-                    }
-                    args.extend([
-                        "-preset".to_string(), "slow".to_string(),
-                        "-x265-params".to_string(), "aq-mode=3:aq-strength=1.0:deblock=-1,-1".to_string(),
-                    ]);
-                }
-                HWAcceleration::NVENC => {
-                    args.extend([
-                        "-preset".to_string(), "slow".to_string(),
-                        "-rc".to_string(), "vbr".to_string(),
-                        "-cq".to_string(), "21".to_string(),
-                    ]);
-                }
-                HWAcceleration::VideoToolbox => {
-                    args.extend(["-q:v".to_string(), "60".to_string()]);
-                }
-                _ => {
-                    args.extend(["-q:v".to_string(), "21".to_string()]);
-                }
-            }
-
-            args.extend([
-                "-c:a".to_string(), "aac".to_string(),
-                "-b:a".to_string(), "192k".to_string(),
-            ]);
-        }
-    }
-
+    // --- Optional Color Correction ---
     if options.optimize_color {
-        args.extend([
-            "-color_primaries".to_string(), "bt709".to_string(),
-            "-color_trc".to_string(), "bt709".to_string(),
-            "-colorspace".to_string(), "bt709".to_string(),
-        ]);
+        if let Some(color_profile) = config.profiles.get("color_correction") {
+            if let Some(extra) = &color_profile.extra_args {
+                // Insert before the last argument (output path)
+                let pos = args.len().saturating_sub(1);
+                for (i, extra_arg) in extra.iter().enumerate() {
+                    args.insert(pos + i, extra_arg.clone());
+                }
+            }
+        }
     }
 
-    args.extend([
-        "-progress".to_string(),
-        "pipe:1".to_string(),
-        "-nostats".to_string(),
-        destination_path.to_string_lossy().to_string(),
-    ]);
-
-    let mut child = Command::new("ffmpeg")
+    let mut child = Command::new(&config.program)
         .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::null())

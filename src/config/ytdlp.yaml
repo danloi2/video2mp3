@@ -1,0 +1,59 @@
+ytdlp:
+  program: "yt-dlp"
+
+  # --- Metadata queries (no download) ---
+
+  get_filename:
+    args:
+      - "--get-filename"
+      - "--no-playlist"
+      - "-o"
+      - "%(title)s.%(ext)s"
+      - "{url}"
+
+  list_playlist:
+    args:
+      - "--flat-playlist"
+      - "--print"
+      - "%(webpage_url)s\t%(title)s"
+      - "{url}"
+
+  # --- Downloads ---
+
+  download_video:
+    # Full video download (best quality, then mux with ffmpeg)
+    args:
+      - "--newline"
+      - "--no-quiet"
+      - "--print"
+      - "after_move:filepath"
+      - "-o"
+      - "{output_template}"   # e.g. /path/to/downloads/%(title)s.%(ext)s
+      - "{url}"
+
+  download_video_mp4:
+    # Force MP4 format
+    args:
+      - "--newline"
+      - "--no-quiet"
+      - "--print"
+      - "after_move:filepath"
+      - "-f"
+      - "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"
+      - "-o"
+      - "{output_template}"
+      - "{url}"
+
+  download_audio_mp3:
+    # Audio-only download, converted to MP3 on the fly
+    args:
+      - "--newline"
+      - "--no-quiet"
+      - "--print"
+      - "after_move:filepath"
+      - "-x"
+      - "--audio-format"
+      - "mp3"
+      - "-o"
+      - "{output_template}"   # e.g. /path/to/downloads/%(title)s.%(ext)s
+      - "{url}"

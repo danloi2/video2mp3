@@ -169,19 +169,21 @@ pub fn get_audio_tracks(file_path: &str) -> Vec<AudioTrack> {
 
 /// Retrieves the duration of the media file in seconds using ffprobe.
 pub(crate) fn get_duration_seconds(file_path: &str) -> Option<f64> {
-    let output = Command::new("ffprobe")
-        .args([
-            "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "json",
-            file_path,
-        ])
+    let config = super::config::load_ffmpeg_config().ok()?;
+    let profile = config.profiles.get("probe_duration")?;
+    let program = profile.program.as_deref().unwrap_or("ffprobe");
+    let mut args = profile.args.as_ref()?.clone();
+
+    for arg in args.iter_mut() {
+        *arg = arg.replace("{input}", file_path);
+    }
+
+    let output = Command::new(program)
+        .args(&args)
         .output()
         .ok()?;
 
-    let json: Value = serde_json::from_slice(&output.stdout).ok()?;
-    json["format"]["duration"]
-        .as_str()?
+    String::from_utf8_lossy(&output.stdout)
         .trim()
         .parse::<f64>()
         .ok()

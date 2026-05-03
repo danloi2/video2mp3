@@ -124,27 +124,29 @@ pub fn render(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Context) {
                     use crate::core::ConversionType;
                     let type_text = match app.conversion_type {
                         ConversionType::AudioMP3  => "🎵 Audio (MP3)",
+                        ConversionType::VideoMKV  => "🎬 Video (MKV - Remux/Copy)",
                         ConversionType::VideoH264 => "🎬 Video (H.264 - Best compatibility)",
                         ConversionType::VideoH265 => "🎬 Video (H.265 - Best compression)",
                     };
-
-                    egui::ComboBox::from_id_salt("conv_type")
-                        .selected_text(RichText::new(type_text).size(18.0).color(Color32::from_rgb(45, 50, 65)))
-                        .width(320.0)
-                        .show_ui(ui, |ui| {
-                            let mut sel_val = |ui: &mut egui::Ui, val: ConversionType, text: &str| {
-                                let is_selected = app.conversion_type == val;
-                                let col = if is_selected { Color32::WHITE } else { Color32::from_rgb(45, 50, 65) };
-                                ui.selectable_value(&mut app.conversion_type, val, RichText::new(text).color(col));
-                            };
-
-                            sel_val(ui, ConversionType::AudioMP3, "🎵 Audio (MP3)");
-                            sel_val(ui, ConversionType::VideoH264, "🎬 Video (H.264 - Best compatibility)");
-                            sel_val(ui, ConversionType::VideoH265, "🎬 Video (H.265 - Best compression)");
-                        });
+ 
+                     egui::ComboBox::from_id_salt("conv_type")
+                         .selected_text(RichText::new(type_text).size(18.0).color(Color32::from_rgb(45, 50, 65)))
+                         .width(320.0)
+                         .show_ui(ui, |ui| {
+                             let mut sel_val = |ui: &mut egui::Ui, val: ConversionType, text: &str| {
+                                 let is_selected = app.conversion_type == val;
+                                 let col = if is_selected { Color32::WHITE } else { Color32::from_rgb(45, 50, 65) };
+                                 ui.selectable_value(&mut app.conversion_type, val, RichText::new(text).color(col));
+                             };
+ 
+                             sel_val(ui, ConversionType::AudioMP3, "🎵 Audio (MP3)");
+                             sel_val(ui, ConversionType::VideoMKV, "🎬 Video (MKV - Remux/Copy)");
+                             sel_val(ui, ConversionType::VideoH264, "🎬 Video (H.264 - Best compatibility)");
+                             sel_val(ui, ConversionType::VideoH265, "🎬 Video (H.265 - Best compression)");
+                         });
 
                     // Conditional video encoding flags
-                    if app.conversion_type != ConversionType::AudioMP3 {
+                    if app.conversion_type != ConversionType::AudioMP3 && app.conversion_type != ConversionType::VideoMKV {
                         ui.separator();
                         ui.checkbox(&mut app.video_options.preserve_grain, "🌑 Preserve Grain");
                         ui.checkbox(&mut app.video_options.optimize_color, "🎨 Optimize Color (BT.709)");
@@ -168,29 +170,32 @@ pub fn render(app: &mut ConvApp, ui: &mut egui::Ui, ctx: &egui::Context) {
                         HWAcceleration::VideoToolbox => "🍎 Apple (VTB)",
                     };
 
-                    egui::ComboBox::from_id_salt("hw_accel")
-                        .selected_text(RichText::new(accel_text).size(16.0).color(Color32::from_rgb(60, 65, 80)))
-                        .width(160.0)
-                        .show_ui(ui, |ui| {
-                            let mut hw_button = |ui: &mut egui::Ui, val: HWAcceleration, label: &str, detected: bool| {
-                                let is_selected = app.video_options.acceleration == val;
-                                let col = if is_selected { Color32::WHITE } else { Color32::from_rgb(45, 50, 65) };
-                                
-                                ui.add_enabled_ui(detected, |ui| {
-                                    let res = ui.selectable_value(&mut app.video_options.acceleration, val, RichText::new(label).color(col));
-                                    if !detected {
-                                        res.on_hover_text("This hardware was not detected in your system.");
-                                    }
-                                });
-                            };
+                    let hw_enabled = app.conversion_type != ConversionType::VideoMKV && app.conversion_type != ConversionType::AudioMP3;
+                    ui.add_enabled_ui(hw_enabled, |ui| {
+                        egui::ComboBox::from_id_salt("hw_accel")
+                            .selected_text(RichText::new(accel_text).size(16.0).color(Color32::from_rgb(60, 65, 80)))
+                            .width(160.0)
+                            .show_ui(ui, |ui| {
+                                let mut hw_button = |ui: &mut egui::Ui, val: HWAcceleration, label: &str, detected: bool| {
+                                    let is_selected = app.video_options.acceleration == val;
+                                    let col = if is_selected { Color32::WHITE } else { Color32::from_rgb(45, 50, 65) };
+                                    
+                                    ui.add_enabled_ui(detected, |ui| {
+                                        let res = ui.selectable_value(&mut app.video_options.acceleration, val, RichText::new(label).color(col));
+                                        if !detected {
+                                            res.on_hover_text("This hardware was not detected in your system.");
+                                        }
+                                    });
+                                };
 
-                            hw_button(ui, HWAcceleration::None, "❌ CPU Only", true);
-                            hw_button(ui, HWAcceleration::NVENC,   "🚀 NVIDIA (NVENC)", app.capabilities.nvenc);
-                            hw_button(ui, HWAcceleration::QSV,     "⚡ Intel (QSV)",     app.capabilities.qsv);
-                            hw_button(ui, HWAcceleration::AMF,     "🏎 AMD (AMF)",       app.capabilities.amf);
-                            hw_button(ui, HWAcceleration::VAAPI,   "🐧 Linux (VAAPI)",   app.capabilities.vaapi);
-                            hw_button(ui, HWAcceleration::VideoToolbox, "🍎 Apple (VTB)", app.capabilities.vtb);
-                        });
+                                hw_button(ui, HWAcceleration::None, "❌ CPU Only", true);
+                                hw_button(ui, HWAcceleration::NVENC,   "🚀 NVIDIA (NVENC)", app.capabilities.nvenc);
+                                hw_button(ui, HWAcceleration::QSV,     "⚡ Intel (QSV)",     app.capabilities.qsv);
+                                hw_button(ui, HWAcceleration::AMF,     "🏎 AMD (AMF)",       app.capabilities.amf);
+                                hw_button(ui, HWAcceleration::VAAPI,   "🐧 Linux (VAAPI)",   app.capabilities.vaapi);
+                                hw_button(ui, HWAcceleration::VideoToolbox, "🍎 Apple (VTB)", app.capabilities.vtb);
+                            });
+                    });
                 });
 
                 ui.add_space(6.0);

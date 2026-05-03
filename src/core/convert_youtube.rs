@@ -1,11 +1,20 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use super::config::load_ytdlp_config;
 
 /// Fetches the filename of a YouTube video without downloading it.
 pub fn get_youtube_name(url: &str) -> Option<String> {
-    let output = Command::new("yt-dlp")
-        .args(["--get-filename", "--no-playlist", "-o", "%(title)s.%(ext)s", url])
+    let config = load_ytdlp_config().ok()?;
+    let profile = config.profiles.get("get_filename")?;
+    let mut args = profile.args.as_ref()?.clone();
+
+    for arg in args.iter_mut() {
+        *arg = arg.replace("{url}", url);
+    }
+
+    let output = Command::new(&config.program)
+        .args(&args)
         .output()
         .ok()?;
     
@@ -23,8 +32,25 @@ pub fn get_playlist_videos<F>(url: &str, mut on_video: F)
 where
     F: FnMut(String, String),
 {
-    let child = Command::new("yt-dlp")
-        .args(["--flat-playlist", "--print", "%(webpage_url)s\t%(title)s", url])
+    let config = match load_ytdlp_config() {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    let profile = match config.profiles.get("list_playlist") {
+        Some(p) => p,
+        None => return,
+    };
+    let mut args = match &profile.args {
+        Some(a) => a.clone(),
+        None => return,
+    };
+
+    for arg in args.iter_mut() {
+        *arg = arg.replace("{url}", url);
+    }
+
+    let child = Command::new(&config.program)
+        .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
@@ -73,27 +99,23 @@ pub fn download_youtube<F>(
 where
     F: Fn(crate::core::ProgressUpdate),
 {
-    let mut args = vec![
-        "--newline".to_string(),
-        "--no-quiet".to_string(),
-        "--print".to_string(),
-        "after_move:filepath".to_string(),
-    ];
-    
-    if audio_only {
-        args.push("-x".to_string());
-        args.push("--audio-format".to_string());
-        args.push("mp3".to_string());
-    }
+    let config = load_ytdlp_config()?;
+    let profile_name = if audio_only { "download_audio_mp3" } else { "download_video" };
+    let profile = config.profiles.get(profile_name)
+        .ok_or_else(|| format!("Profile '{}' not found", profile_name))?;
+    let mut args = profile.args.as_ref()
+        .ok_or_else(|| format!("Profile '{}' has no arguments", profile_name))?
+        .clone();
 
     let template = "%(title)s.%(ext)s";
     let full_template = destination.join(template);
 
-    args.push("-o".to_string());
-    args.push(full_template.to_string_lossy().to_string());
-    args.push(url.to_string());
+    for arg in args.iter_mut() {
+        *arg = arg.replace("{url}", url)
+                  .replace("{output_template}", &full_template.to_string_lossy());
+    }
 
-    let mut child = Command::new("yt-dlp")
+    let mut child = Command::new(&config.program)
         .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
