@@ -15,13 +15,30 @@
   $: selected   = $queue.filter(f => f.selected).length;
 
   async function convert() {
-    await startConversion({
-      convType:      get(convType),
-      acceleration:  get(acceleration),
-      preserveGrain: get(preserveGrain),
-      optimizeColor: get(optimizeColor),
-      outputDir:     get(outputDir),
-    });
+    const allSelected = get(queue).filter(f => f.selected && f.status === 'pending');
+    if (allSelected.length === 0) return;
+
+    const localItems = allSelected.filter(f => !f.youtubeUrl);
+    const ytItems    = allSelected.filter(f => f.youtubeUrl);
+
+    // 1. Process local files
+    if (localItems.length > 0) {
+      await startConversion({
+        convType:      get(convType),
+        acceleration:  get(acceleration),
+        preserveGrain: get(preserveGrain),
+        optimizeColor: get(optimizeColor),
+        outputDir:     get(outputDir),
+      }, localItems);
+    }
+
+    // 2. Process YouTube downloads
+    if (ytItems.length > 0) {
+      await downloadYoutube({
+        convType:      get(convType),
+        outputDir:     get(outputDir),
+      }, ytItems);
+    }
   }
 
   async function changeOutputDir() {

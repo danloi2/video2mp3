@@ -13,7 +13,15 @@
     <div class="progress-track">
       <div class="progress-fill" style="width:{pct}%"></div>
     </div>
-    <span class="pct-label">{#if $isConverting}{pct}%{:else if done > 0}{done}/{total} done{#if errors > 0} · {errors} error(s){/if}{:else}Ready{/if}</span>
+    <span class="pct-label">
+      {#if $isConverting}
+        {pct}% Processing...
+      {:else if done > 0}
+        {done}/{total} files done {#if errors > 0} ({errors} errors){/if}
+      {:else}
+        Ready
+      {/if}
+    </span>
   </div>
 
   <!-- Log -->

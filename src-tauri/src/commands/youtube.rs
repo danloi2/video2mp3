@@ -59,7 +59,11 @@ pub async fn download_youtube_cmd(
         _           => ConversionType::AudioMP3,
     };
 
-    let dest = Path::new(&destination).to_path_buf();
+    let dest = if destination.is_empty() {
+        dirs::download_dir().unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
+    } else {
+        Path::new(&destination).to_path_buf()
+    };
 
     for (idx, url) in urls.into_iter().enumerate() {
         let app_clone    = app.clone();

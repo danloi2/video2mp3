@@ -38,14 +38,18 @@ ytdlp:
   # --- Downloads ---
 
   download_video:
-    # Full video download (best quality, then mux with ffmpeg)
+    # Full video download (best quality video + best quality audio)
     args:
       - "--newline"
       - "--no-quiet"
       - "--print"
       - "after_move:filepath"
+      - "-f"
+      - "bestvideo+bestaudio/best"
+      - "--merge-output-format"
+      - "mkv"
       - "-o"
-      - "{output_template}"   # e.g. /path/to/downloads/%(title)s.%(ext)s
+      - "{output_template}"
       - "{url}"
 
   download_video_mp4:
@@ -89,6 +93,36 @@ ytdlp:
       - "m4a"
       - "--audio-quality"
       - "2"
+      - "-o"
+      - "{output_template}"
+      - "{url}"
+
+  download_video_h264:
+    # Force H264 video codec
+    args:
+      - "--newline"
+      - "--no-quiet"
+      - "--print"
+      - "after_move:filepath"
+      - "-S"
+      - "vcodec:h264,res,acodec:m4a"
+      - "--recode-video"
+      - "mp4"
+      - "-o"
+      - "{output_template}"
+      - "{url}"
+
+  download_video_h265:
+    # Force H265 (HEVC) video codec
+    args:
+      - "--newline"
+      - "--no-quiet"
+      - "--print"
+      - "after_move:filepath"
+      - "-S"
+      - "vcodec:h265,res,acodec:m4a"
+      - "--recode-video"
+      - "mkv"
       - "-o"
       - "{output_template}"
       - "{url}"

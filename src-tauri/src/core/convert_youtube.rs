@@ -107,8 +107,10 @@ where
     let config = load_ytdlp_config()?;
     
     let profile_name = match conv_type {
-        crate::core::ConversionType::AudioMP3 => "download_audio_mp3",
-        crate::core::ConversionType::AudioAAC => "download_audio_aac",
+        crate::core::ConversionType::AudioMP3  => "download_audio_mp3",
+        crate::core::ConversionType::AudioAAC  => "download_audio_aac",
+        crate::core::ConversionType::VideoH264 => "download_video_h264",
+        crate::core::ConversionType::VideoH265 => "download_video_h265",
         _ => "download_video",
     };
 

@@ -96,12 +96,13 @@ export function selectNone() { queue.update(q => q.map(f => ({ ...f, selected: f
 // ─── Conversion ───────────────────────────────────────────────────────────────
 
 /**
- * Triggers the conversion process for all pending and selected files in the queue.
- * @param {Object} settings Conversion configuration from stores.
+ * Triggers the conversion process for a specific list of items.
+ * @param {Object} settings - Conversion configuration.
+ * @param {Object[]} items - The file items to process.
  */
-export async function startConversion(settings) {
-  const files = get(queue).filter(f => f.selected && f.status === 'pending');
-  if (!files.length) return;
+export async function startConversion(settings, items) {
+  if (!items?.length) return;
+  const files = items;
 
   // Build temporary job list to check for existing files
   const baseJobs = files.map(f => ({
@@ -149,10 +150,11 @@ export async function startConversion(settings) {
         message,
       } : f));
 
-      // Update overall progress
+      // Update overall progress (smooth average of all files in this batch)
       const q = get(queue);
-      const done = q.filter(f => ['done','error'].includes(f.status)).length;
-      totalProgress.set(done / ids.length);
+      const batchFiles = q.filter(f => ids.includes(f.id));
+      const totalBatchRatio = batchFiles.reduce((acc, f) => acc + f.progress, 0);
+      totalProgress.set(totalBatchRatio / ids.length);
 
       if (message && (phase === 'done' || phase === 'error')) {
         appendLog(phase === 'done', message);
@@ -216,19 +218,25 @@ export async function addFromYoutube(url, settings) {
 }
 
 /**
- * Initiates the download and conversion process for the queued YouTube videos.
- * @param {string[]} urls - List of video URLs to process.
- * @param {string} destination - Output directory path.
- * @param {string} convType - Target conversion format.
+ * Initiates the download and conversion process for specific YouTube items.
+ * @param {Object} settings - Conversion settings.
+ * @param {Object[]} items - The items from the queue to download.
  */
-export async function downloadYoutube(urls, destination, convType) {
+export async function downloadYoutube(settings, items) {
+  if (!items?.length) return;
+  const urls = items.map(i => i.path);
+  const ids  = items.map(i => i.id);
+
   isConverting.set(true);
+  totalProgress.set(0);
+
+  // Mark all as converting
+  queue.update(q => q.map(f => ids.includes(f.id) ? { ...f, status: 'converting' } : f));
 
   unlistenYtProgress = await listen('yt:progress', ({ payload }) => {
     const { index, ratio, phase, message } = payload;
-    // Update corresponding queue item
-    const q = get(queue).filter(f => f.youtubeUrl);
-    const fileId = q[index]?.id;
+    const fileId = ids[index];
+    
     if (fileId) {
       queue.update(all => all.map(f => f.id === fileId ? {
         ...f,
@@ -237,6 +245,13 @@ export async function downloadYoutube(urls, destination, convType) {
         message,
       } : f));
     }
+
+    // Update overall progress for THIS batch
+    const q = get(queue);
+    const batchFiles = q.filter(f => ids.includes(f.id));
+    const totalBatchRatio = batchFiles.reduce((acc, f) => acc + f.progress, 0);
+    totalProgress.set(totalBatchRatio / ids.length);
+
     if (message && (phase === 'done' || phase === 'error')) {
       appendLog(phase === 'done', message);
     }
@@ -244,11 +259,14 @@ export async function downloadYoutube(urls, destination, convType) {
 
   unlistenYtFinished = await listen('yt:finished', () => {
     isConverting.set(false);
+    totalProgress.set(1);
     cleanup();
     appendLog(true, '✅ YouTube download complete');
   });
 
   try {
+    const destination = settings.outputDir || "";
+    const convType    = settings.convType;
     await invoke('download_youtube_cmd', { urls, destination, convType });
   } catch (e) {
     appendLog(false, `YouTube error: ${e}`);
