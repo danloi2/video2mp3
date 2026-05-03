@@ -1,13 +1,18 @@
 <script>
   import { onMount } from 'svelte';
+  
+  // Import UI Components
   import TopBar from './lib/TopBar.svelte';
   import Settings from './lib/Settings.svelte';
   import YouTubeBar from './lib/YouTubeBar.svelte';
   import FileQueue from './lib/FileQueue.svelte';
   import BottomBar from './lib/BottomBar.svelte';
+  
+  // Import core logic and global CSS
   import { initSystem } from './app.js';
   import './styles.css';
 
+  // Initialize the system (probe hardware/software) when the app starts
   onMount(() => {
     initSystem();
   });

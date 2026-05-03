@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { open } from '@tauri-apps/plugin-dialog';
+import { open, ask } from '@tauri-apps/plugin-dialog';
 import { queue, log, isConverting, totalProgress, system } from './stores.js';
 import { get } from 'svelte/store';
 
@@ -22,6 +22,9 @@ export async function initSystem() {
 
 // ─── File Queue ───────────────────────────────────────────────────────────────
 
+/**
+ * Opens a native OS dialog to select video files and adds them to the conversion queue.
+ */
 export async function addFiles() {
   try {
     const selected = await open({
@@ -38,6 +41,9 @@ export async function addFiles() {
   }
 }
 
+/**
+ * Opens a native OS dialog to select a folder for batch conversion.
+ */
 export async function addFolder() {
   try {
     const selected = await open({ directory: true });
@@ -89,58 +95,79 @@ export function selectNone() { queue.update(q => q.map(f => ({ ...f, selected: f
 
 // ─── Conversion ───────────────────────────────────────────────────────────────
 
+/**
+ * Triggers the conversion process for all pending and selected files in the queue.
+ * @param {Object} settings Conversion configuration from stores.
+ */
 export async function startConversion(settings) {
   const files = get(queue).filter(f => f.selected && f.status === 'pending');
   if (!files.length) return;
 
-  isConverting.set(true);
-  totalProgress.set(0);
-
-  // Mark all as converting
-  const ids = files.map(f => f.id);
-  queue.update(q => q.map(f => ids.includes(f.id) ? { ...f, status: 'converting' } : f));
-
-  // Build job list for backend
-  const jobs = files.map((f, idx) => ({
-    source:        f.path,
-    destination:   null,
-    audio_stream:  f.tracks[f.selectedTrack]?.stream_index ?? 0,
-    conv_type:     settings.convType,
-    acceleration:  settings.acceleration,
+  // Build temporary job list to check for existing files
+  const baseJobs = files.map(f => ({
+    source:         f.path,
+    destination:    null,
+    conv_type:      settings.convType,
+    acceleration:   settings.acceleration,
     preserve_grain: settings.preserveGrain,
     optimize_color: settings.optimizeColor,
+    audio_stream:   f.tracks[f.selectedTrack]?.stream_index ?? 0,
+    overwrite:      false
   }));
 
-  // Listen to progress events
-  unlistenProgress = await listen('convert:progress', ({ payload }) => {
-    const { index, ratio, phase, message } = payload;
-    const fileId = ids[index];
-    queue.update(q => q.map(f => f.id === fileId ? {
-      ...f,
-      progress: ratio,
-      status:   phase === 'done' ? 'done' : phase === 'error' ? 'error' : 'converting',
-      message,
-    } : f));
-
-    // Update overall progress
-    const q = get(queue);
-    const done = q.filter(f => ['done','error'].includes(f.status)).length;
-    totalProgress.set(done / ids.length);
-
-    if (message && (phase === 'done' || phase === 'error')) {
-      appendLog(phase === 'done', message);
-    }
-  });
-
-  unlistenFinished = await listen('convert:finished', () => {
-    isConverting.set(false);
-    totalProgress.set(1);
-    cleanup();
-    appendLog(true, '✅ Batch complete');
-  });
-
   try {
+    const existing = await invoke('check_existing_files', { jobs: baseJobs });
+    
+    let overwriteAll = false;
+    if (existing.length > 0) {
+      const confirmed = await ask(
+        `The following file(s) already exist:\n\n${existing.join('\n')}\n\nDo you want to overwrite them?`,
+        { title: 'Overwrite Confirmation', kind: 'warning' }
+      );
+      if (!confirmed) return; // User cancelled
+      overwriteAll = true;
+    }
+
+    isConverting.set(true);
+    totalProgress.set(0);
+
+    // Mark all as converting
+    const ids = files.map(f => f.id);
+    queue.update(q => q.map(f => ids.includes(f.id) ? { ...f, status: 'converting' } : f));
+
+    // Final job list with correct overwrite flag
+    const jobs = baseJobs.map(j => ({ ...j, overwrite: overwriteAll }));
+
+    // Listen to progress events
+    unlistenProgress = await listen('convert:progress', ({ payload }) => {
+      const { index, ratio, phase, message } = payload;
+      const fileId = ids[index];
+      queue.update(q => q.map(f => f.id === fileId ? {
+        ...f,
+        progress: ratio,
+        status:   phase === 'done' ? 'done' : phase === 'error' ? 'error' : 'converting',
+        message,
+      } : f));
+
+      // Update overall progress
+      const q = get(queue);
+      const done = q.filter(f => ['done','error'].includes(f.status)).length;
+      totalProgress.set(done / ids.length);
+
+      if (message && (phase === 'done' || phase === 'error')) {
+        appendLog(phase === 'done', message);
+      }
+    });
+
+    unlistenFinished = await listen('convert:finished', () => {
+      isConverting.set(false);
+      totalProgress.set(1);
+      cleanup();
+      appendLog(true, '✅ Batch complete');
+    });
+
     await invoke('convert_files', { jobs });
+
   } catch (e) {
     appendLog(false, `Conversion error: ${e}`);
     isConverting.set(false);
@@ -156,6 +183,11 @@ export function cancelConversion() {
 
 // ─── YouTube ──────────────────────────────────────────────────────────────────
 
+/**
+ * Scans a YouTube URL (video or playlist) and adds the items to the conversion queue.
+ * @param {string} url - The YouTube link.
+ * @param {Object} settings - Conversion settings.
+ */
 export async function addFromYoutube(url, settings) {
   if (!url.trim()) return;
   appendLog(true, `🔍 Scanning: ${url}`);
@@ -183,6 +215,12 @@ export async function addFromYoutube(url, settings) {
   }
 }
 
+/**
+ * Initiates the download and conversion process for the queued YouTube videos.
+ * @param {string[]} urls - List of video URLs to process.
+ * @param {string} destination - Output directory path.
+ * @param {string} convType - Target conversion format.
+ */
 export async function downloadYoutube(urls, destination, convType) {
   isConverting.set(true);
 

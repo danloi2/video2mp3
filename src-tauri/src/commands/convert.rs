@@ -23,6 +23,36 @@ pub struct ConvertJob {
     pub preserve_grain: bool,
     /// Enforce BT.709 color space parameters.
     pub optimize_color: bool,
+    /// Whether to overwrite existing files.
+    pub overwrite:      bool,
+}
+
+/// Helper to determine the expected output path for a job.
+fn get_dest_path(job: &ConvertJob) -> std::path::PathBuf {
+    if let Some(dest) = &job.destination {
+        return std::path::PathBuf::from(dest);
+    }
+    let source = std::path::Path::new(&job.source);
+    let stem = source.file_stem().unwrap_or_default().to_string_lossy();
+    let ext = match job.conv_type.as_str() {
+        "AudioMP3" => "mp3",
+        "AudioAAC" => "m4a",
+        _          => "mkv",
+    };
+    source.parent().unwrap_or(std::path::Path::new(".")).join(format!("{}.{}", stem, ext))
+}
+
+/// Checks which files in the batch already exist.
+#[tauri::command]
+pub async fn check_existing_files(jobs: Vec<ConvertJob>) -> Result<Vec<String>, String> {
+    let mut existing = Vec::new();
+    for job in jobs {
+        let dest = get_dest_path(&job);
+        if dest.exists() {
+            existing.push(dest.to_string_lossy().into_owned());
+        }
+    }
+    Ok(existing)
 }
 
 /// Progress event payload emitted for each file during conversion.
@@ -100,7 +130,7 @@ pub async fn convert_files(app: AppHandle, jobs: Vec<ConvertJob>) -> Result<(), 
             &source_path,
             dest_path.as_deref(),
             job.audio_stream,
-            true,
+            job.overwrite,
             conv_type,
             options,
             cancel_clone,

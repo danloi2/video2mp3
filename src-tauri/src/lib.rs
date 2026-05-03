@@ -15,6 +15,7 @@ pub fn run() {
             commands::probe::probe_system,
             commands::probe::scan_file,
             commands::convert::convert_files,
+            commands::convert::check_existing_files,
             commands::youtube::scan_playlist,
             commands::youtube::download_youtube_cmd,
         ])
