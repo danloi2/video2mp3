@@ -60,7 +60,27 @@ graph TD
 - **`src/core/`**: Pure business logic, hardware detection, and media wrappers.
 - **`src/gui/logic/`**: Thread-safe message handling and application flow control.
 - **`src/gui/layout/`**: Declarative UI components and custom design system.
+- **`src/config/`**: External YAML profiles for FFmpeg, yt-dlp, and FFprobe commands.
 - **`src/cli/`**: Headless batch processing engine.
+
+---
+
+## ⚙️ Advanced Configuration (YAML)
+
+**video2mp3** externalizes its conversion and download logic into YAML configuration files. This allows advanced users to modify FFmpeg parameters, add custom filters, or change tool paths without recompiling the application.
+
+### 📄 Configuration Files
+- **`src/config/ffmpeg.yaml`**: Defines profiles for audio extraction, remuxing, and hardware-accelerated transcoding (H.264/H.265).
+- **`src/config/ytdlp.yaml`**: Manages yt-dlp arguments for metadata extraction and various download modes.
+- **`src/config/ffprobe.yaml`**: Configuration for media inspection, duration probing, and stream analysis.
+
+### 🧩 Dynamic Placeholders
+The configuration uses a template system with several placeholders that are resolved at runtime:
+- `{input}` / `{output}`: Source and destination file paths.
+- `{audio_stream}`: The index of the user-selected audio track.
+- `{hw_codec}`: Automatically resolved based on detected hardware (e.g., `h264_nvenc`, `hevc_qsv`).
+- `{tune}`: Dynamic tuning for software encoders (`film` or `grain`).
+- `{output_template}`: Path template for yt-dlp downloads.
 
 ---
 

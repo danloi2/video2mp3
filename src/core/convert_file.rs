@@ -1,3 +1,8 @@
+//! Local file transcoding and remuxing.
+//!
+//! This module implements the conversion logic for files already present on the
+//! local filesystem, utilizing FFmpeg profiles defined in the configuration.
+
 use std::io::BufRead;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};

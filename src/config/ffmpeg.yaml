@@ -1,8 +1,49 @@
+# FFmpeg Configuration Profiles
+# ----------------------------
+# This file defines the command-line arguments for various transcoding and 
+# remuxing operations. 
+# 
+# Placeholders:
+# {input}          - Source file path
+# {output}         - Destination file path
+# {audio_stream}   - Index of the selected audio stream (e.g. 0:1)
+# {hw_codec}       - Automatically resolved hardware encoder (e.g. h264_nvenc)
+# {tune}           - Software encoder tuning (film or grain)
+
 ffmpeg:
+  # Path to the ffmpeg binary
   program: "ffmpeg"
 
-  # --- Audio ---
+  # --- SYSTEM / PROBING ---
 
+  # Get version string
+  check_version:
+    args:
+      - "-version"
+
+  # List available hardware acceleration types
+  list_hwaccels:
+    args:
+      - "-hwaccels"
+
+  # List available encoders
+  list_encoders:
+    args:
+      - "-encoders"
+
+  # Initialize a hardware device (used for verification)
+  init_device:
+    args:
+      - "-hide_banner"
+      - "-init_hw_device"
+      - "{device_type}"
+      - "-f"
+      - "null"
+      - "-"
+
+  # --- AUDIO EXTRACTION ---
+
+  # High-quality MP3 extraction
   extract_audio_mp3:
     args:
       - "-y"
@@ -19,6 +60,7 @@ ffmpeg:
       - "-nostats"
       - "{output}"
 
+  # AAC extraction (alternative high-efficiency format)
   extract_audio_aac:
     args:
       - "-y"
@@ -35,6 +77,9 @@ ffmpeg:
       - "-nostats"
       - "{output}"
 
+  # --- VIDEO REMUXING ---
+
+  # Change container to MKV without re-encoding (copy streams)
   remux_mkv:
     args:
     - "-y"
@@ -51,8 +96,9 @@ ffmpeg:
     - "-nostats"
     - "{output}"
 
-  # --- Video H.264 (software) ---
+  # --- VIDEO TRANSCODING (H.264) ---
 
+  # H.264 Software Encoding (libx264) - Best compatibility and quality
   encode_h264_software:
     args:
       - "-y"
@@ -62,6 +108,8 @@ ffmpeg:
       - "0:v:0"
       - "-map"
       - "0:{audio_stream}"
+      - "-map"
+      - "0:s?"
       - "-c:v"
       - "libx264"
       - "-crf"
@@ -80,6 +128,8 @@ ffmpeg:
       - "ac3"
       - "-b:a"
       - "448k"
+      - "-c:s"
+      - "copy"
       - "-progress"
       - "pipe:1"
       - "-nostats"
@@ -98,6 +148,8 @@ ffmpeg:
       - "0:v:0"
       - "-map"
       - "0:{audio_stream}"
+      - "-map"
+      - "0:s?"
       - "-c:v"
       - "h264_nvenc"
       - "-preset"
@@ -112,6 +164,8 @@ ffmpeg:
       - "ac3"
       - "-b:a"
       - "448k"
+      - "-c:s"
+      - "copy"
       - "-progress"
       - "pipe:1"
       - "-nostats"
@@ -130,6 +184,8 @@ ffmpeg:
       - "0:v:0"
       - "-map"
       - "0:{audio_stream}"
+      - "-map"
+      - "0:s?"
       - "-c:v"
       - "{hw_codec}"     # h264_qsv | h264_amf | h264_vaapi | h264_videotoolbox
       - "-q:v"
@@ -138,13 +194,16 @@ ffmpeg:
       - "ac3"
       - "-b:a"
       - "448k"
+      - "-c:s"
+      - "copy"
       - "-progress"
       - "pipe:1"
       - "-nostats"
       - "{output}"
 
-  # --- Video H.265 (software) ---
+  # --- VIDEO TRANSCODING (H.265 / HEVC) ---
 
+  # H.265 Software Encoding (libx265) - Superior compression
   encode_h265_software:
     args:
       - "-y"
@@ -154,6 +213,8 @@ ffmpeg:
       - "0:v:0"
       - "-map"
       - "0:{audio_stream}"
+      - "-map"
+      - "0:s?"
       - "-c:v"
       - "libx265"
       - "-crf"
@@ -166,6 +227,8 @@ ffmpeg:
       - "aac"
       - "-b:a"
       - "192k"
+      - "-c:s"
+      - "copy"
       - "-progress"
       - "pipe:1"
       - "-nostats"
@@ -184,6 +247,8 @@ ffmpeg:
       - "0:v:0"
       - "-map"
       - "0:{audio_stream}"
+      - "-map"
+      - "0:s?"
       - "-c:v"
       - "hevc_nvenc"
       - "-preset"
@@ -196,6 +261,8 @@ ffmpeg:
       - "aac"
       - "-b:a"
       - "192k"
+      - "-c:s"
+      - "copy"
       - "-progress"
       - "pipe:1"
       - "-nostats"
@@ -214,6 +281,8 @@ ffmpeg:
       - "0:v:0"
       - "-map"
       - "0:{audio_stream}"
+      - "-map"
+      - "0:s?"
       - "-c:v"
       - "{hw_codec}"     # hevc_qsv | hevc_amf | hevc_vaapi | hevc_videotoolbox
       - "-q:v"
@@ -222,6 +291,8 @@ ffmpeg:
       - "aac"
       - "-b:a"
       - "192k"
+      - "-c:s"
+      - "copy"
       - "-progress"
       - "pipe:1"
       - "-nostats"
@@ -238,15 +309,3 @@ ffmpeg:
       - "-colorspace"
       - "bt709"
 
-  # --- Probe (duration) ---
-
-  probe_duration:
-    program: "ffprobe"
-    args:
-      - "-v"
-      - "error"
-      - "-show_entries"
-      - "format=duration"
-      - "-of"
-      - "default=noprint_wrappers=1:nokey=1"
-      - "{input}"

@@ -1,3 +1,8 @@
+//! YouTube downloading and processing.
+//!
+//! This module manages interaction with `yt-dlp` to fetch metadata, list
+//! playlists, and download media directly from YouTube URLs.
+
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};

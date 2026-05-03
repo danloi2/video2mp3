@@ -1,0 +1,54 @@
+# FFprobe Configuration Profiles
+# ----------------------------
+# This file defines the queries used to extract metadata and media info.
+#
+# Placeholders:
+# {input} - Target file path
+
+ffprobe:
+  # Path to the ffprobe binary
+  program: "ffprobe"
+
+  # --- SYSTEM / PROBING ---
+
+  # Get version string
+  check_version:
+    args:
+      - "-version"
+
+  # --- MEDIA PROBING ---
+
+  # Extract the total duration of the media in seconds
+  probe_duration:
+    args:
+      - "-v"
+      - "error"
+      - "-show_entries"
+      - "format=duration"
+      - "-of"
+      - "default=noprint_wrappers=1:nokey=1"
+      - "{input}"
+
+  # Scan for available audio streams and their metadata
+  probe_audio_streams:
+    args:
+      - "-v"
+      - "error"
+      - "-show_entries"
+      - "stream=index,codec_name:stream_tags=language"
+      - "-select_streams"
+      - "a"
+      - "-of"
+      - "json"
+      - "{input}"
+
+  # Extract container format and primary codec information
+  probe_media_info:
+    args:
+      - "-v"
+      - "error"
+      - "-show_entries"
+      - "format=format_name:stream=codec_name,codec_type"
+      - "-of"
+      - "json"
+      - "{input}"

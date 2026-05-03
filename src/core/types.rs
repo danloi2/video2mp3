@@ -1,3 +1,9 @@
+//! Shared data structures and enumerations.
+//!
+//! This module defines the core types used throughout the application,
+//! including conversion settings, hardware acceleration backends, and 
+//! progress reporting structures.
+
 /// Defines the target format for the conversion process.
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub enum ConversionType {

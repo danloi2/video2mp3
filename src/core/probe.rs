@@ -14,26 +14,36 @@ pub struct HWCapabilities {
 
 /// Validates that both `ffmpeg` and `ffprobe` are installed and available in the system PATH.
 pub fn verify_ffmpeg() -> bool {
-    Command::new("ffmpeg").arg("-version").output().is_ok()
-        && Command::new("ffprobe").arg("-version").output().is_ok()
+    let ffmpeg_ok = super::config::load_ffmpeg_config()
+        .map(|c| Command::new(c.program).arg("-version").output().is_ok())
+        .unwrap_or(false);
+    let ffprobe_ok = super::config::load_ffprobe_config()
+        .map(|c| Command::new(c.program).arg("-version").output().is_ok())
+        .unwrap_or(false);
+    ffmpeg_ok && ffprobe_ok
 }
 
 /// Validates that `yt-dlp` is installed and available in the system PATH.
 pub fn verify_ytdlp() -> bool {
-    Command::new("yt-dlp").arg("--version").output().is_ok()
+    super::config::load_ytdlp_config()
+        .map(|c| Command::new(c.program).arg("--version").output().is_ok())
+        .unwrap_or(false)
 }
 
 /// Extracts the short version string from the `ffmpeg -version` output.
 pub fn get_ffmpeg_version() -> String {
-    if let Ok(output) = Command::new("ffmpeg").arg("-version").output() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        if let Some(line) = stdout.lines().next() {
-            // Parses "ffmpeg version 7.1-static ..." -> "7.1-static"
-            return line.replace("ffmpeg version ", "")
-                       .split_whitespace()
-                       .next()
-                       .unwrap_or("?")
-                       .to_string();
+    if let Ok(config) = super::config::load_ffmpeg_config() {
+        if let Some(profile) = config.profiles.get("check_version") {
+            if let Ok(output) = Command::new(&config.program).args(profile.args.as_ref().unwrap()).output() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                if let Some(line) = stdout.lines().next() {
+                    return line.replace("ffmpeg version ", "")
+                               .split_whitespace()
+                               .next()
+                               .unwrap_or("?")
+                               .to_string();
+                }
+            }
         }
     }
     "unknown".to_string()
@@ -41,8 +51,12 @@ pub fn get_ffmpeg_version() -> String {
 
 /// Retrieves the version string reported by `yt-dlp --version`.
 pub fn get_ytdlp_version() -> String {
-    if let Ok(output) = Command::new("yt-dlp").arg("--version").output() {
-        return String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if let Ok(config) = super::config::load_ytdlp_config() {
+        if let Some(profile) = config.profiles.get("check_version") {
+            if let Ok(output) = Command::new(&config.program).args(profile.args.as_ref().unwrap()).output() {
+                return String::from_utf8_lossy(&output.stdout).trim().to_string();
+            }
+        }
     }
     "unknown".to_string()
 }
@@ -75,18 +89,26 @@ pub fn detect_hw_capabilities() -> HWCapabilities {
 
 /// Checks if a specific hardware acceleration type is listed in `ffmpeg -hwaccels`.
 fn probe_hwaccel(accel_type: &str) -> bool {
-    if let Ok(output) = Command::new("ffmpeg").arg("-hwaccels").output() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        return stdout.contains(accel_type);
+    if let Ok(config) = super::config::load_ffmpeg_config() {
+        if let Some(profile) = config.profiles.get("list_hwaccels") {
+            if let Ok(output) = Command::new(&config.program).args(profile.args.as_ref().unwrap()).output() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                return stdout.contains(accel_type);
+            }
+        }
     }
     false
 }
 
 /// Checks if a specific encoder string is present in the `ffmpeg -encoders` list.
 fn probe_encoder(encoder_name: &str) -> bool {
-    if let Ok(output) = Command::new("ffmpeg").arg("-encoders").output() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        return stdout.to_lowercase().contains(encoder_name);
+    if let Ok(config) = super::config::load_ffmpeg_config() {
+        if let Some(profile) = config.profiles.get("list_encoders") {
+            if let Ok(output) = Command::new(&config.program).args(profile.args.as_ref().unwrap()).output() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                return stdout.to_lowercase().contains(encoder_name);
+            }
+        }
     }
     false
 }
@@ -95,10 +117,16 @@ fn probe_encoder(encoder_name: &str) -> bool {
 /// 
 /// This is the most reliable way to check if a specific GPU/driver is actually functional.
 fn probe_device(device_type: &str) -> bool {
-    if let Ok(output) = Command::new("ffmpeg")
-        .args(["-hide_banner", "-init_hw_device", device_type, "-f", "null", "-"])
-        .output() {
-        return output.status.success();
+    if let Ok(config) = super::config::load_ffmpeg_config() {
+        if let Some(profile) = config.profiles.get("init_device") {
+            let mut args = profile.args.as_ref().unwrap().clone();
+            for arg in args.iter_mut() {
+                *arg = arg.replace("{device_type}", device_type);
+            }
+            if let Ok(output) = Command::new(&config.program).args(&args).output() {
+                return output.status.success();
+            }
+        }
     }
     false
 }
@@ -116,14 +144,23 @@ pub fn select_default_track(tracks: &[AudioTrack]) -> usize {
 
 /// Helper function to extract audio stream metadata using ffprobe in JSON format.
 fn get_audio_streams_json(file_path: &str) -> Vec<Value> {
-    let Ok(output) = Command::new("ffprobe")
-        .args([
-            "-v", "error",
-            "-show_entries", "stream=index,codec_name:stream_tags=language",
-            "-select_streams", "a",
-            "-of", "json",
-            file_path,
-        ])
+    let Ok(config) = super::config::load_ffprobe_config() else {
+        return vec![];
+    };
+    let Some(profile) = config.profiles.get("probe_audio_streams") else {
+        return vec![];
+    };
+    let mut args = match &profile.args {
+        Some(a) => a.clone(),
+        None => return vec![],
+    };
+
+    for arg in args.iter_mut() {
+        *arg = arg.replace("{input}", file_path);
+    }
+
+    let Ok(output) = Command::new(&config.program)
+        .args(&args)
         .output()
     else {
         return vec![];
@@ -169,16 +206,15 @@ pub fn get_audio_tracks(file_path: &str) -> Vec<AudioTrack> {
 
 /// Retrieves the duration of the media file in seconds using ffprobe.
 pub(crate) fn get_duration_seconds(file_path: &str) -> Option<f64> {
-    let config = super::config::load_ffmpeg_config().ok()?;
+    let config = super::config::load_ffprobe_config().ok()?;
     let profile = config.profiles.get("probe_duration")?;
-    let program = profile.program.as_deref().unwrap_or("ffprobe");
     let mut args = profile.args.as_ref()?.clone();
 
     for arg in args.iter_mut() {
         *arg = arg.replace("{input}", file_path);
     }
 
-    let output = Command::new(program)
+    let output = Command::new(&config.program)
         .args(&args)
         .output()
         .ok()?;
@@ -191,13 +227,16 @@ pub(crate) fn get_duration_seconds(file_path: &str) -> Option<f64> {
 
 /// Collects primary media info (container and first video/audio codecs) from a file.
 pub fn get_media_info(file_path: &str) -> Option<super::types::MediaInfo> {
-    let output = Command::new("ffprobe")
-        .args([
-            "-v", "error",
-            "-show_entries", "format=format_name:stream=codec_name,codec_type",
-            "-of", "json",
-            file_path,
-        ])
+    let config = super::config::load_ffprobe_config().ok()?;
+    let profile = config.profiles.get("probe_media_info")?;
+    let mut args = profile.args.as_ref()?.clone();
+
+    for arg in args.iter_mut() {
+        *arg = arg.replace("{input}", file_path);
+    }
+
+    let output = Command::new(&config.program)
+        .args(&args)
         .output()
         .ok()?;
 

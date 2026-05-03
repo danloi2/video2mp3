@@ -1,8 +1,25 @@
+# yt-dlp Configuration Profiles
+# ----------------------------
+# This file defines how YouTube videos and playlists are queried and downloaded.
+#
+# Placeholders:
+# {url}             - Target YouTube URL
+# {output_template} - Full destination path template (handled by yt-dlp)
+
 ytdlp:
+  # Path to the yt-dlp binary
   program: "yt-dlp"
 
-  # --- Metadata queries (no download) ---
+  # --- SYSTEM / PROBING ---
 
+  # Get version string
+  check_version:
+    args:
+      - "--version"
+
+  # --- METADATA QUERIES ---
+
+  # Get the final filename without downloading
   get_filename:
     args:
       - "--get-filename"
