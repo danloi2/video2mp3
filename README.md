@@ -6,28 +6,29 @@
 
 > **A blazingly fast, professional media suite for high-performance transcoding and YouTube downloading.**
 
-**video2mp3** is an industry-grade media processing suite designed for effortless downloading and high-speed re-encoding. By bridging the raw efficiency of **FFmpeg** and **yt-dlp** with a sleek, modern **Svelte** and **Tauri 2.0** interface, it provides a powerful yet intuitive workspace for both single-file tasks and massive batch conversions—all boosted by full hardware acceleration.
+**video2mp3** is an industry-grade media processing suite designed for effortless downloading and high-speed re-encoding. By bridging the raw efficiency of **FFmpeg** and **yt-dlp** with a sleek, modern **Svelte 5** and **Tauri 2.0** interface, it provides a powerful yet intuitive workspace for both single-file tasks and massive batch conversions—all boosted by full hardware acceleration and the bleeding-edge performance of **Vite 8 (Rolldown)**.
 
 ![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
 ![Tauri](https://img.shields.io/badge/Tauri_2.0-FFC131?style=for-the-badge&logo=tauri&logoColor=white)
-![Svelte](https://img.shields.io/badge/Svelte-FF3E00?style=for-the-badge&logo=svelte&logoColor=white)
+![Svelte](https://img.shields.io/badge/Svelte_5-FF3E00?style=for-the-badge&logo=svelte&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite_8-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)
-![Hardware Accel](https://img.shields.io/badge/HW--Acceleration-Active-blue?style=for-the-badge)
 
 ---
 
 ## 🏛️ Project Philosophy
 
-The project is built on the pillars of **native performance**, **professional architecture**, and **beautiful UI**. Recently migrated to a **Tauri 2.0 + Svelte** stack, **video2mp3** serves as a template for how to build robust, thread-safe, and visually stunning cross-platform media desktop applications.
+The project is built on the pillars of **native performance**, **professional architecture**, and **beautiful UI**. Recently migrated to the **Vite 8 + Svelte 5** stack, **video2mp3** leverages the latest in web-native bundling and fine-grained reactivity to deliver an instantaneous user experience.
 
 ---
 
 ## ✨ Key Features
 
-### 🌍 YouTube & Playlists
+### 🌍 YouTube & Playlists (Advanced)
+- **Codec Selection**: Force H.264 (compatibility), H.265 (efficiency), or best-quality Remux directly from the UI.
 - **Smart Staged Workflow**: Analyze YouTube URLs in the background while managing your queue.
 - **Full Playlist Support**: Automatically detect and expand entire playlists for batch processing.
-- **Progress Tracking**: Real-time feedback for both download and post-processing phases via IPC Events.
+- **Progress Tracking**: Real-time, smooth progress reporting for both download and post-processing phases.
 
 ### 🚀 Hardware Acceleration (Pro Grade)
 - **Real-time Probing**: Dynamically detects available GPU encoders (NVENC, QSV, AMF, VAAPI, VideoToolbox).
@@ -35,9 +36,10 @@ The project is built on the pillars of **native performance**, **professional ar
 - **Visual Status**: Integrated UI tags show exactly which hardware features are currently usable on your system.
 
 ### 🎥 Professional Media Workspace
+- **Safety First**: Integrated **Overwrite Protection** with confirmation dialogs for existing files.
+- **Smooth Batching**: Overall progress bar uses weighted averages for a fluid, jump-free visual feedback.
 - **Deep Media Probing**: Detailed inspection of containers and codecs (MKV, MP4, etc.) using `ffprobe`.
 - **Intelligent Track Selection**: Scans all audio streams; automatically pre-selects primary language tracks.
-- **Custom Design System**: A premium, high-contrast dark theme powered by modern CSS tokens and Vite.
 
 ---
 
@@ -47,8 +49,8 @@ The project has been refactored into a modern, decoupled web/native structure:
 
 ```mermaid
 graph TD
-    A[Svelte UI - src/] -->|Tauri IPC Commands| B[Tauri Backend - src-tauri/]
-    A -->|State Management| C[stores.js]
+    A["Svelte 5 UI (Runes)"] -->|Tauri IPC Commands| B[Tauri Backend - Rust]
+    A -->|State Management| C[Reactive Stores]
     B -->|Async Events| A
     B --> D[Core Engine]
     D --> E[FFmpeg/yt-dlp Wrappers]
