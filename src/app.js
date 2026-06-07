@@ -107,7 +107,7 @@ export async function startConversion(settings, items) {
   // Build temporary job list to check for existing files
   const baseJobs = files.map(f => ({
     source:         f.path,
-    destination:    null,
+    destination:    settings.outputDir || null,
     conv_type:      settings.convType,
     acceleration:   settings.acceleration,
     preserve_grain: settings.preserveGrain,

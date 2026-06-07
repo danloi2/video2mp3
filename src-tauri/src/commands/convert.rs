@@ -29,16 +29,24 @@ pub struct ConvertJob {
 
 /// Helper to determine the expected output path for a job.
 fn get_dest_path(job: &ConvertJob) -> std::path::PathBuf {
-    if let Some(dest) = &job.destination {
-        return std::path::PathBuf::from(dest);
-    }
     let source = std::path::Path::new(&job.source);
     let stem = source.file_stem().unwrap_or_default().to_string_lossy();
     let ext = match job.conv_type.as_str() {
         "AudioMP3" => "mp3",
         "AudioAAC" => "m4a",
+        "VideoH264" => "mkv",
+        "VideoH265" => "mkv",
         _          => "mkv",
     };
+    
+    if let Some(dest) = &job.destination {
+        let dest_path = std::path::Path::new(dest);
+        if dest_path.is_dir() || dest_path.extension().is_none() {
+            return dest_path.join(format!("{}.{}", stem, ext));
+        }
+        return dest_path.to_path_buf();
+    }
+    
     source.parent().unwrap_or(std::path::Path::new(".")).join(format!("{}.{}", stem, ext))
 }
 
@@ -107,7 +115,7 @@ pub async fn convert_files(app: AppHandle, jobs: Vec<ConvertJob>) -> Result<(), 
 
     for (idx, job) in jobs.into_iter().enumerate() {
         let source_path    = Path::new(&job.source).to_path_buf();
-        let dest_path      = job.destination.as_ref().map(|d| Path::new(d).to_path_buf());
+        let dest_path      = get_dest_path(&job);
         let conv_type      = parse_conv_type(&job.conv_type);
         let options        = VideoOptions {
             preserve_grain: job.preserve_grain,
@@ -128,7 +136,7 @@ pub async fn convert_files(app: AppHandle, jobs: Vec<ConvertJob>) -> Result<(), 
 
         let result = convert_file(
             &source_path,
-            dest_path.as_deref(),
+            Some(dest_path.as_path()),
             job.audio_stream,
             job.overwrite,
             conv_type,
