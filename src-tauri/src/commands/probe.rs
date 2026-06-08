@@ -25,11 +25,20 @@ pub struct FileInfo {
     pub v_codec:   Option<String>,
     pub a_codec:   Option<String>,
     pub tracks:    Vec<AudioTrackInfo>,
+    pub subtitles: Vec<SubtitleTrackInfo>,
 }
 
 /// Audio track metadata payload.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AudioTrackInfo {
+    pub stream_index:  u64,
+    pub codec:         String,
+    pub language:      String,
+}
+
+/// Subtitle track metadata payload.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SubtitleTrackInfo {
     pub stream_index:  u64,
     pub codec:         String,
     pub language:      String,
@@ -71,6 +80,15 @@ pub async fn scan_file(path: String) -> Result<FileInfo, String> {
         })
         .collect();
 
+    let subtitles = probe::get_subtitle_tracks(&path)
+        .into_iter()
+        .map(|t| SubtitleTrackInfo {
+            stream_index: t.stream_index,
+            codec:        t.codec,
+            language:     t.language,
+        })
+        .collect();
+
     let info = probe::get_media_info(&path);
 
     Ok(FileInfo {
@@ -79,5 +97,6 @@ pub async fn scan_file(path: String) -> Result<FileInfo, String> {
         v_codec:   info.as_ref().and_then(|i| i.v_codec.clone()),
         a_codec:   info.as_ref().and_then(|i| i.a_codec.clone()),
         tracks,
+        subtitles,
     })
 }

@@ -58,6 +58,17 @@ pub struct AudioTrack {
     pub language: String,
 }
 
+/// Metadata representation of a subtitle track found within a container.
+#[derive(Clone, Debug)]
+pub struct SubtitleTrack {
+    /// Zero-based index of the stream within the file.
+    pub stream_index: u64,
+    /// Codec name (e.g., "subrip", "ass").
+    pub codec: String,
+    /// Language code if available (e.g., "eng", "spa").
+    pub language: String,
+}
+
 /// Basic media information extracted during probing.
 #[derive(Clone, Debug)]
 pub struct MediaInfo {

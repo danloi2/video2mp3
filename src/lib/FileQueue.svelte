@@ -54,6 +54,10 @@
     queue.update(q => q.map(f => f.id === id ? { ...f, selectedTrack: Number(idx) } : f));
   }
 
+  function setSubtitle(id, val) {
+    queue.update(q => q.map(f => f.id === id ? { ...f, selectedSubtitle: val } : f));
+  }
+
   const LANG_MAP = {
     spa:'Español', eng:'English', fra:'Français', deu:'Deutsch', ita:'Italiano',
     jpn:'日本語', zho:'中文', por:'Português', rus:'Русский', kor:'한국어',
@@ -168,6 +172,24 @@
           <div class="track-row">
             <span class="track-label">🎵</span>
             <span class="track-single">Track 1 — {langName(file.tracks[0].language)} ({file.tracks[0].codec.toUpperCase()})</span>
+          </div>
+        {/if}
+
+        <!-- Subtitle track selector -->
+        {#if file.subtitles && file.subtitles.length > 0}
+          <div class="track-row">
+            <span class="track-label">💬 Subtitles:</span>
+            <select
+              value={file.selectedSubtitle}
+              onchange={e => setSubtitle(file.id, e.target.value)}
+              disabled={$isConverting}
+            >
+              <option value="all">All Subtitles</option>
+              <option value="none">None</option>
+              {#each file.subtitles as t, i}
+                <option value={t.stream_index}>Track {i+1} — {langName(t.language)} ({t.codec.toUpperCase()})</option>
+              {/each}
+            </select>
           </div>
         {/if}
 

@@ -15,6 +15,8 @@ pub struct ConvertJob {
     pub destination:  Option<String>,
     /// Zero-based stream index of the selected audio track.
     pub audio_stream: u64,
+    /// Selected subtitle stream ("all", "none", or absolute stream index like "2").
+    pub subtitle_stream: Option<String>,
     /// Conversion mode: "AudioMP3" | "AudioAAC" | "VideoMKV" | "VideoH264" | "VideoH265"
     pub conv_type:    String,
     /// Hardware acceleration: "None" | "NVENC" | "QSV" | "AMF" | "VAAPI" | "VideoToolbox"
@@ -138,6 +140,7 @@ pub async fn convert_files(app: AppHandle, jobs: Vec<ConvertJob>) -> Result<(), 
             &source_path,
             Some(dest_path.as_path()),
             job.audio_stream,
+            job.subtitle_stream.clone(),
             job.overwrite,
             conv_type,
             options,

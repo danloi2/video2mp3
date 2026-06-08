@@ -16,6 +16,7 @@ pub fn convert_file<F>(
     source: &Path,
     destination: Option<&Path>,
     audio_stream: u64,
+    subtitle_stream: Option<String>,
     overwrite: bool,
     conv_type: ConversionType,
     options: VideoOptions,
@@ -106,6 +107,35 @@ where
                   .replace("{audio_stream}", &audio_stream.to_string())
                   .replace("{hw_codec}", hw_codec)
                   .replace("{tune}", tune);
+    }
+
+    // --- Subtitle Selection ---
+    // The profiles currently use `-map 0:s?` for subtitles.
+    // We dynamically replace or remove it based on user selection.
+    let sub = subtitle_stream.as_deref().unwrap_or("all");
+    let mut i = 0;
+    while i < args.len() {
+        if args[i] == "0:s?" {
+            match sub {
+                "none" => {
+                    // Remove both "0:s?" and the preceding "-map"
+                    args.remove(i);
+                    if i > 0 && args[i - 1] == "-map" {
+                        args.remove(i - 1);
+                        i -= 1; // Adjust index because we removed an element before it
+                    }
+                    continue; // Skip the increment as we removed elements
+                }
+                "all" => {
+                    // Leave it as "0:s?"
+                }
+                specific => {
+                    // Specific stream index, e.g. "2"
+                    args[i] = format!("0:{}", specific);
+                }
+            }
+        }
+        i += 1;
     }
 
     // --- Optional Color Correction ---

@@ -52,3 +52,16 @@ ffprobe:
       - "-of"
       - "json"
       - "{input}"
+
+  # Scan for available subtitle streams and their metadata
+  probe_subtitle_streams:
+    args:
+      - "-v"
+      - "error"
+      - "-show_entries"
+      - "stream=index,codec_name:stream_tags=language"
+      - "-select_streams"
+      - "s"
+      - "-of"
+      - "json"
+      - "{input}"

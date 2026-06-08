@@ -1,4 +1,4 @@
-use super::types::AudioTrack;
+use super::types::{AudioTrack, SubtitleTrack};
 use serde_json::Value;
 use std::process::Command;
 
@@ -183,6 +183,68 @@ pub fn get_audio_tracks(file_path: &str) -> Vec<AudioTrack> {
     get_audio_streams_json(file_path)
         .into_iter()
         .map(|s| AudioTrack {
+            stream_index: s["index"].as_u64().unwrap_or(0),
+            codec: s["codec_name"].as_str().unwrap_or("?").to_string(),
+            language: s["tags"]["language"]
+                .as_str()
+                .unwrap_or("unknown")
+                .to_string(),
+        })
+        .collect()
+}
+
+/// Helper function to extract subtitle stream metadata using ffprobe in JSON format.
+fn get_subtitle_streams_json(file_path: &str) -> Vec<Value> {
+    let Ok(config) = super::config::load_ffprobe_config() else {
+        return vec![];
+    };
+    let Some(profile) = config.profiles.get("probe_subtitle_streams") else {
+        return vec![];
+    };
+    let mut args = match &profile.args {
+        Some(a) => a.clone(),
+        None => return vec![],
+    };
+
+    for arg in args.iter_mut() {
+        *arg = arg.replace("{input}", file_path);
+    }
+
+    let Ok(output) = Command::new(&config.program)
+        .args(&args)
+        .output()
+    else {
+        return vec![];
+    };
+
+    let Ok(json): Result<Value, _> = serde_json::from_slice(&output.stdout) else {
+        return vec![];
+    };
+
+    match json["streams"].as_array() {
+        Some(arr) => arr
+            .iter()
+            .map(|s| {
+                let mut s = s.clone();
+                // Ensure the tags object exists to avoid runtime errors during access
+                if s.get("tags").is_none() {
+                    s["tags"] = Value::Object(serde_json::Map::new());
+                }
+                if s["tags"].get("language").is_none() {
+                    s["tags"]["language"] = Value::String("unknown".to_string());
+                }
+                s
+            })
+            .collect(),
+        None => vec![],
+    }
+}
+
+/// Returns a list of all subtitle tracks found within the specified media file.
+pub fn get_subtitle_tracks(file_path: &str) -> Vec<SubtitleTrack> {
+    get_subtitle_streams_json(file_path)
+        .into_iter()
+        .map(|s| SubtitleTrack {
             stream_index: s["index"].as_u64().unwrap_or(0),
             codec: s["codec_name"].as_str().unwrap_or("?").to_string(),
             language: s["tags"]["language"]

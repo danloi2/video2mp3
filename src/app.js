@@ -63,6 +63,7 @@ async function addFileToQueue(path) {
   queue.update(q => [...q, {
     id, path, name, selected: true, status: 'pending',
     progress: 0, tracks: [], selectedTrack: 0,
+    subtitles: [], selectedSubtitle: 'all',
   }]);
 
   // Then enrich with metadata from backend
@@ -74,6 +75,7 @@ async function addFileToQueue(path) {
       vCodec:    info.v_codec,
       aCodec:    info.a_codec,
       tracks:    info.tracks,
+      subtitles: info.subtitles || [],
     } : f));
   } catch (e) {
     console.warn('scan_file failed for', path, e);
@@ -113,6 +115,7 @@ export async function startConversion(settings, items) {
     preserve_grain: settings.preserveGrain,
     optimize_color: settings.optimizeColor,
     audio_stream:   f.tracks[f.selectedTrack]?.stream_index ?? 0,
+    subtitle_stream: f.selectedSubtitle ?? "all",
     overwrite:      false
   }));
 
@@ -209,6 +212,8 @@ export async function addFromYoutube(url, settings) {
       progress:     0,
       tracks:       [],
       selectedTrack: 0,
+      subtitles:    [],
+      selectedSubtitle: 'all',
       youtubeUrl:   e.url,
     }))]);
     appendLog(true, `Added ${entries.length} item(s) from YouTube`);
