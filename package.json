@@ -1,6 +1,6 @@
 {
   "name": "video2mp3",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "NO_STRIP=true tauri build"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
