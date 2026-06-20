@@ -13,6 +13,8 @@ pub enum ConversionType {
     AudioAAC,
     /// Remux or convert video to MKV container.
     VideoMKV,
+    /// Copy video to MKV container, but encode audio as AAC.
+    VideoMKVAAC,
     /// Transcode video to H.264 (AVC) format.
     VideoH264,
     /// Transcode video to H.265 (HEVC) format.

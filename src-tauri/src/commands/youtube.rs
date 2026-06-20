@@ -51,13 +51,17 @@ pub async fn download_youtube_cmd(
         });
     }
 
-    let ct = match conv_type.as_str() {
-        "AudioAAC"  => ConversionType::AudioAAC,
-        "VideoMKV"  => ConversionType::VideoMKV,
-        "VideoH264" => ConversionType::VideoH264,
-        "VideoH265" => ConversionType::VideoH265,
-        _           => ConversionType::AudioMP3,
-    };
+    fn parse_conv_type(s: &str) -> ConversionType {
+        match s {
+            "AudioAAC"  => ConversionType::AudioAAC,
+            "VideoMKV"  => ConversionType::VideoMKV,
+            "VideoMKVAAC" => ConversionType::VideoMKVAAC,
+            "VideoH264" => ConversionType::VideoH264,
+            "VideoH265" => ConversionType::VideoH265,
+            _           => ConversionType::AudioMP3,
+        }
+    }
+    let ct = parse_conv_type(&conv_type);
 
     let dest = if destination.is_empty() {
         dirs::download_dir().unwrap_or_else(|| std::env::current_dir().unwrap_or_default())

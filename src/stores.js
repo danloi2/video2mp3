@@ -14,7 +14,7 @@ export const isConverting  = writable(false);
 export const totalProgress = writable(0); // 0..1 overall batch progress
 
 // Conversion settings
-export const convType    = writable('AudioMP3');   // AudioMP3 | AudioAAC | VideoMKV | VideoH264 | VideoH265
+export const convType    = writable('AudioMP3');   // AudioMP3 | AudioAAC | VideoMKV | VideoMKVAAC | VideoH264 | VideoH265
 export const acceleration = writable('None');      // None | NVENC | QSV | AMF | VAAPI | VideoToolbox
 export const preserveGrain = writable(false);
 export const optimizeColor = writable(false);

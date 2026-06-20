@@ -5,6 +5,7 @@
     { value: 'AudioMP3',  label: '🎵 Audio (MP3)' },
     { value: 'AudioAAC',  label: '🎵 Audio (AAC)' },
     { value: 'VideoMKV',  label: '🎬 Video (MKV — Remux/Copy)' },
+    { value: 'VideoMKVAAC', label: '🎬 Video (Copy Video, AAC Audio)' },
     { value: 'VideoH264', label: '🎬 Video (H.264 — Best compatibility)' },
     { value: 'VideoH265', label: '🎬 Video (H.265 — Best compression)' },
   ];
@@ -19,7 +20,7 @@
   ];
 
   $: isAudio   = $convType === 'AudioMP3' || $convType === 'AudioAAC';
-  $: isRemux   = $convType === 'VideoMKV';
+  $: isRemux   = $convType === 'VideoMKV' || $convType === 'VideoMKVAAC';
   $: showVideo = !isAudio && !isRemux;
   $: hwTags    = $system ? [
     { label: 'CPU',   color: '#8b91a7', show: true },

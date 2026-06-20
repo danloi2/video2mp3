@@ -82,6 +82,7 @@ fn parse_conv_type(s: &str) -> ConversionType {
     match s {
         "AudioAAC"  => ConversionType::AudioAAC,
         "VideoMKV"  => ConversionType::VideoMKV,
+        "VideoMKVAAC" => ConversionType::VideoMKVAAC,
         "VideoH264" => ConversionType::VideoH264,
         "VideoH265" => ConversionType::VideoH265,
         _           => ConversionType::AudioMP3,

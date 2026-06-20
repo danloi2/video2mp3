@@ -96,6 +96,34 @@ ffmpeg:
     - "-nostats"
     - "{output}"
 
+  # Copy video stream, encode audio to AAC
+  copy_video_aac_audio:
+    args:
+    - "-y"
+    - "-fflags"
+    - "+genpts"
+    - "-i"
+    - "{input}"
+    - "-map"
+    - "0:v:0"
+    - "-map"
+    - "0:{audio_stream}"
+    - "-map"
+    - "0:s?"
+    - "-c:v"
+    - "copy"
+    - "-c:a"
+    - "aac"
+    - "-b:a"
+    - "192k"
+    - "-c:s"
+    - "copy"
+    - "-progress"
+    - "pipe:1"
+    - "-nostats"
+    - "{output}"
+
+
   # --- VIDEO TRANSCODING (H.264) ---
 
   # H.264 Software Encoding (libx264) - Best compatibility and quality

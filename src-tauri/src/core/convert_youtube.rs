@@ -141,6 +141,7 @@ where
 
     if let Some(stdout) = child.stdout.take() {
         let mut cancelled = false;
+        let mut max_ratio: f32 = 0.0;
         use std::io::BufRead;
         for line in std::io::BufReader::new(stdout).lines().map_while(Result::ok) {
             if cancel.load(Ordering::Relaxed) {
@@ -180,7 +181,11 @@ where
                 if let Some(pos) = line.find('%') {
                     let start = line[..pos].rfind(' ').unwrap_or(0);
                     if let Ok(p) = line[start..pos].trim().parse::<f32>() {
-                        on_progress(crate::core::ProgressUpdate::Ratio(p / 100.0));
+                        let ratio = (p / 100.0).clamp(0.0, 1.0);
+                        if ratio > max_ratio {
+                            max_ratio = ratio;
+                            on_progress(crate::core::ProgressUpdate::Ratio(max_ratio));
+                        }
                     }
                 }
             }

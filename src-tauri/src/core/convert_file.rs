@@ -67,6 +67,7 @@ where
         ConversionType::AudioMP3 => "extract_audio_mp3",
         ConversionType::AudioAAC => "extract_audio_aac",
         ConversionType::VideoMKV => "remux_mkv",
+        ConversionType::VideoMKVAAC => "copy_video_aac_audio",
         ConversionType::VideoH264 => match options.acceleration {
             HWAcceleration::None => "encode_h264_software",
             HWAcceleration::NVENC => "encode_h264_nvenc",
@@ -160,6 +161,7 @@ where
 
     if let Some(stdout) = child.stdout.take() {
         let mut cancelled = false;
+        let mut max_ratio: f32 = 0.0;
         for line in std::io::BufReader::new(stdout).lines().map_while(Result::ok) {
             if cancel.load(Ordering::Relaxed) {
                 child.kill().ok();
@@ -171,7 +173,10 @@ where
                     if us > 0 && duration_s > 0.0 {
                         let ratio =
                             ((us as f64 / 1_000_000.0) / duration_s).clamp(0.0, 1.0) as f32;
-                        on_progress(crate::core::ProgressUpdate::Ratio(ratio));
+                        if ratio > max_ratio {
+                            max_ratio = ratio;
+                            on_progress(crate::core::ProgressUpdate::Ratio(max_ratio));
+                        }
                     }
                 }
             }
