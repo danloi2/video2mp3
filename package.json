@@ -19,9 +19,9 @@
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
-    "@tauri-apps/cli": "^2.11.3",
+    "@tauri-apps/cli": "^2.11.4",
     "esbuild": "^0.28.1",
-    "svelte": "^5.56.3",
-    "vite": "^8.0.16"
+    "svelte": "^5.56.4",
+    "vite": "^8.1.3"
   }
 }

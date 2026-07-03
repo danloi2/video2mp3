@@ -1,8 +1,6 @@
 # video2mp3 🎵
 
-<p align="center">
-  <img src="resources/icon.png" width="180" alt="video2mp3 Logo">
-</p>
+![video2mp3 Logo](resources/icon.png)
 
 > **A blazingly fast, professional media suite for high-performance transcoding and YouTube downloading.**
 
@@ -25,21 +23,34 @@ The project is built on the pillars of **native performance**, **professional ar
 ## ✨ Key Features
 
 ### 🌍 YouTube & Playlists (Advanced)
+
 - **Codec Selection**: Force H.264 (compatibility), H.265 (efficiency), or best-quality Remux directly from the UI.
 - **Smart Staged Workflow**: Analyze YouTube URLs in the background while managing your queue.
 - **Full Playlist Support**: Automatically detect and expand entire playlists for batch processing.
 - **Progress Tracking**: Real-time, smooth progress reporting for both download and post-processing phases.
 
 ### 🚀 Hardware Acceleration (Pro Grade)
+
 - **Real-time Probing**: Dynamically detects available GPU encoders (NVENC, QSV, AMF, VAAPI, VideoToolbox).
 - **Dynamic Optimization**: Automatically configures encoder flags for the best balance between speed and quality.
 - **Visual Status**: Integrated UI tags show exactly which hardware features are currently usable on your system.
 
 ### 🎥 Professional Media Workspace
+
 - **Safety First**: Integrated **Overwrite Protection** with confirmation dialogs for existing files.
 - **Smooth Batching**: Overall progress bar uses weighted averages for a fluid, jump-free visual feedback.
 - **Deep Media Probing**: Detailed inspection of containers and codecs (MKV, MP4, etc.) using `ffprobe`.
 - **Intelligent Track Selection**: Scans all audio streams; automatically pre-selects primary language tracks.
+
+### 🎵 Audio Extraction & Processing
+
+- **Format Flexibility**: Extract high-quality audio natively in MP3 or raw AAC (.mp4).
+- **VideoMKVAAC**: Copy original video streams while extracting/converting the audio track to AAC seamlessly.
+
+### 📝 Subtitle Management
+
+- **Smart Detection**: Automatically detects internal subtitle streams within video containers.
+- **Dynamic Mapping**: Select specific subtitle tracks, keep them all, or completely remove them during conversion.
 
 ---
 
@@ -70,6 +81,7 @@ graph TD
 **video2mp3** externalizes its conversion and download logic into YAML configuration files. This allows advanced modifications to FFmpeg parameters without touching the Rust core.
 
 ### 📄 Configuration Files (`src-tauri/src/config/`)
+
 - **`ffmpeg.yaml`**: Defines profiles for audio extraction, remuxing, and hardware-accelerated transcoding.
 - **`ytdlp.yaml`**: Manages yt-dlp arguments for metadata extraction and various download modes.
 - **`ffprobe.yaml`**: Configuration for media inspection, duration probing, and stream analysis.
@@ -99,22 +111,26 @@ graph TD
 ### Build from source
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/danloi2/video2mp3.git
    cd video2mp3
    ```
 
 2. **Install frontend dependencies**:
+
    ```bash
    pnpm install
    ```
 
 3. **Run in Development Mode (Hot-Reload)**:
+
    ```bash
    pnpm tauri dev
    ```
 
 4. **Build Production Installers**:
+
    ```bash
    pnpm tauri build
    ```
