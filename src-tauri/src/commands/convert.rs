@@ -35,7 +35,7 @@ fn get_dest_path(job: &ConvertJob) -> std::path::PathBuf {
     let stem = source.file_stem().unwrap_or_default().to_string_lossy();
     let ext = match job.conv_type.as_str() {
         "AudioMP3" => "mp3",
-        "AudioAAC" => "m4a",
+        "AudioAAC" => "mp4",
         "VideoH264" => "mkv",
         "VideoH265" => "mkv",
         _          => "mkv",

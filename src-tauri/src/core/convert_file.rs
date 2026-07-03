@@ -38,7 +38,7 @@ where
     // Determine target extension based on conversion type
     let ext = match conv_type {
         ConversionType::AudioMP3 => "mp3",
-        ConversionType::AudioAAC => "m4a",
+        ConversionType::AudioAAC => "mp4",
         _ => "mkv",
     };
 
