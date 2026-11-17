@@ -113,7 +113,9 @@ jobs:
         run: |
           node -e "
             const fs = require('fs');
-            const tag = '${{ github.ref_name }}'.replace(/^v/, '');
+            const raw = '${{ github.ref_name }}';
+            const match = raw.match(/(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)/);
+            const tag = match ? match[1] : raw.replace(/^v\.?/, '');
             
             let tauri = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json'));
             tauri.version = tag;

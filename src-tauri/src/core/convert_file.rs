@@ -102,10 +102,16 @@ where
 
     let tune = if options.preserve_grain { "grain" } else { "film" };
 
+    let audio_stream_str = if audio_stream == 0 {
+        "a:0".to_string()
+    } else {
+        audio_stream.to_string()
+    };
+
     for arg in args.iter_mut() {
         *arg = arg.replace("{input}", &source.to_string_lossy())
                   .replace("{output}", &destination_path.to_string_lossy())
-                  .replace("{audio_stream}", &audio_stream.to_string())
+                  .replace("{audio_stream}", &audio_stream_str)
                   .replace("{hw_codec}", hw_codec)
                   .replace("{tune}", tune);
     }
@@ -155,9 +161,18 @@ where
     let mut child = Command::new(&config.program)
         .args(&args)
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| format!("Could not launch FFmpeg: {}", e))?;
+
+    let stderr_handle = child.stderr.take().map(|mut stderr| {
+        std::thread::spawn(move || {
+            let mut err_msg = String::new();
+            use std::io::Read;
+            let _ = stderr.read_to_string(&mut err_msg);
+            err_msg
+        })
+    });
 
     if let Some(stdout) = child.stdout.take() {
         let mut cancelled = false;
@@ -190,6 +205,10 @@ where
 
     let status = child.wait().map_err(|e| e.to_string())?;
 
+    let stderr_output = stderr_handle
+        .and_then(|h| h.join().ok())
+        .unwrap_or_default();
+
     if status.success() {
         Ok(format!(
             "✅ {} → {}",
@@ -198,9 +217,15 @@ where
         ))
     } else {
         let _ = std::fs::remove_file(&destination_path);
+        let detail = stderr_output
+            .lines()
+            .rev()
+            .find(|l| !l.trim().is_empty())
+            .unwrap_or("Unknown error");
         Err(format!(
-            "❌ FFmpeg failed to convert '{}'",
-            source.file_name().unwrap_or_default().to_string_lossy()
+            "❌ FFmpeg failed to convert '{}': {}",
+            source.file_name().unwrap_or_default().to_string_lossy(),
+            detail
         ))
     }
 }
