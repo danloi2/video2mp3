@@ -2,7 +2,7 @@
 
 ![video2mp3 Logo](resources/icon.png)
 
-> **A blazingly fast, professional media suite for high-performance transcoding and YouTube downloading.**
+> **A blazingly fast, professional media suite for high-performance transcoding and YouTube downloading..**
 
 **video2mp3** is an industry-grade media processing suite designed for effortless downloading and high-speed re-encoding. By bridging the raw efficiency of **FFmpeg** and **yt-dlp** with a sleek, modern **Svelte 5** and **Tauri 2.0** interface, it provides a powerful yet intuitive workspace for both single-file tasks and massive batch conversions—all boosted by full hardware acceleration and the bleeding-edge performance of **Vite 8 (Rolldown)**.
 
