@@ -142,6 +142,8 @@ ffmpeg:
       - "0:s?"
       - "-c:v"
       - "libx264"
+      - "-pix_fmt"
+      - "yuv420p"
       - "-crf"
       - "18"
       - "-tune"
